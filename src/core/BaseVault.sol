@@ -246,6 +246,9 @@ abstract contract BaseVault is
 
         assets = previewMint(shares);
         if (assets == 0) revert ZeroAmount();
+        if (totalSupply() == 0 && assets < minFirstDeposit) {
+            revert FirstDepositTooSmall(minFirstDeposit, assets);
+        }
 
         SafeERC20.safeTransferFrom(
             IERC20(asset()),
@@ -275,6 +278,10 @@ abstract contract BaseVault is
     ) internal virtual returns (uint256 actualAssets);
 
     /* ========== FEE MANAGEMENT ========== */
+
+    function harvestFees() external {
+        _harvestFees();
+    }
 
     function _harvestFees() internal {
         uint256 currentTotal = totalAssets();

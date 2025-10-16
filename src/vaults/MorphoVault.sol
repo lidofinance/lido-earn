@@ -68,6 +68,7 @@ contract MorphoVault is BaseVault {
         address /* receiver */
     ) internal override returns (uint256 morphoShares) {
         morphoShares = MORPHO_VAULT.deposit(assets, address(this));
+
         if (morphoShares == 0) {
             revert MorphoDepositFailed();
         }
@@ -87,6 +88,7 @@ contract MorphoVault is BaseVault {
         address /* owner */
     ) internal override returns (uint256 actualAssets) {
         uint256 availableAssets = MORPHO_VAULT.maxWithdraw(address(this));
+
         if (assetsRequested > availableAssets) {
             revert BaseVault.InsufficientLiquidity(
                 assetsRequested,
