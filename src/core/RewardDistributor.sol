@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract RewardDistributor {
@@ -22,12 +23,14 @@ contract RewardDistributor {
         address indexed token,
         uint256 amount
     );
+    event VaultRedeemed(address indexed vault, uint256 shares, uint256 assets);
 
     error InvalidRecipientsLength();
     error InvalidBasisPointsSum();
     error ZeroAddress();
     error ZeroBasisPoints();
     error NoBalance();
+    error NoShares();
 
     constructor(address[] memory _recipients, uint256[] memory _basisPoints) {
         if (_recipients.length != _basisPoints.length) {
@@ -62,6 +65,19 @@ contract RewardDistributor {
         if (totalBps != MAX_BPS) {
             revert InvalidBasisPointsSum();
         }
+    }
+
+    function redeemFromVault(address vault) external returns (uint256 assets) {
+        IERC4626 vaultContract = IERC4626(vault);
+        uint256 shares = vaultContract.balanceOf(address(this));
+
+        if (shares == 0) {
+            revert NoShares();
+        }
+
+        assets = vaultContract.redeem(shares, address(this), address(this));
+
+        emit VaultRedeemed(vault, shares, assets);
     }
 
     function distribute(address token) external {

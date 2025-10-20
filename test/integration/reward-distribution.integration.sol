@@ -428,15 +428,8 @@ contract RewardDistributionIntegrationTest is Test {
 
         // Distribute rewards from RewardDistributor
         {
-            uint256 distributorShares = vault.balanceOf(
-                address(rewardDistributor)
-            );
-
-            vm.prank(address(rewardDistributor));
-            uint256 distributorAssets = vault.redeem(
-                distributorShares,
-                address(rewardDistributor),
-                address(rewardDistributor)
+            uint256 distributorAssets = rewardDistributor.redeemFromVault(
+                address(vault)
             );
 
             assertEq(vault.balanceOf(address(rewardDistributor)), 0);

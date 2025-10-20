@@ -24,22 +24,14 @@ contract MockMetaMorpho is ERC4626 {
         _offset = offset_;
     }
 
-
-    function setYieldRate(uint256 rate) external {
-        yieldRate = rate;
-    }
-
     function setLiquidityCap(uint256 cap) external {
         liquidityCap = cap;
     }
 
-
     function getSharePrice() external view returns (uint256) {
-        return totalSupply() > 0
-            ? (totalAssets() * 1e18) / totalSupply()
-            : 1e18;
+        return
+            totalSupply() > 0 ? (totalAssets() * 1e18) / totalSupply() : 1e18;
     }
-
 
     function maxWithdraw(address owner) public view override returns (uint256) {
         uint256 baseMax = super.maxWithdraw(owner);
