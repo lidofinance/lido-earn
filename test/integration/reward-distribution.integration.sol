@@ -30,7 +30,8 @@ contract RewardDistributionIntegrationTest is Test {
         morpho = new MockMetaMorpho(
             IERC20(address(usdc)),
             "Mock Morpho USDC",
-            "mUSDC"
+            "mUSDC",
+            OFFSET
         );
 
         vault = new MorphoVault(

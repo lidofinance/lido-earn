@@ -44,7 +44,8 @@ contract MorphoVaultUnitTest is Test {
         morpho = new MockMetaMorpho(
             IERC20(address(usdc)),
             "Mock Morpho USDC",
-            "mUSDC"
+            "mUSDC",
+            OFFSET
         );
 
         vault = new MorphoVault(
@@ -95,11 +96,12 @@ contract MorphoVaultUnitTest is Test {
 
     function test_Deposit_Basic() public {
         uint256 depositAmount = 10_000e6;
+        uint256 expectedShares = depositAmount * 10 ** vault.OFFSET(); // First deposit with offset
 
         vm.prank(alice);
         uint256 shares = vault.deposit(depositAmount, alice);
 
-        assertGt(shares, 0, "Should receive shares");
+        assertEq(shares, expectedShares, "Should receive exact shares");
         assertEq(vault.balanceOf(alice), shares, "Alice should have shares");
         assertEq(vault.totalSupply(), shares, "Total supply should match");
         assertApproxEqAbs(
@@ -128,7 +130,16 @@ contract MorphoVaultUnitTest is Test {
         vm.prank(bob);
         uint256 bobShares = vault.deposit(30_000e6, bob);
 
-        assertGt(aliceShares, bobShares, "Alice should have more shares");
+        // Alice deposited more, so should have more shares
+        uint256 expectedAliceShares = 50_000e6 * 10 ** vault.OFFSET();
+        uint256 expectedBobShares = 30_000e6 * 10 ** vault.OFFSET();
+
+        assertEq(
+            aliceShares,
+            expectedAliceShares,
+            "Alice should have exact shares"
+        );
+        assertEq(bobShares, expectedBobShares, "Bob should have exact shares");
         assertEq(vault.totalSupply(), aliceShares + bobShares);
         assertApproxEqAbs(vault.totalAssets(), 80_000e6, 2);
     }
@@ -137,16 +148,23 @@ contract MorphoVaultUnitTest is Test {
         uint256 depositAmount = 10_000e6;
 
         uint256 morphoBalanceBefore = morpho.balanceOf(address(vault));
+        assertEq(
+            morphoBalanceBefore,
+            0,
+            "Should start with zero Morpho shares"
+        );
 
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
 
         uint256 morphoBalanceAfter = morpho.balanceOf(address(vault));
+        // MockMetaMorpho теперь использует offset, первый депозит: depositAmount * 10^OFFSET
+        uint256 expectedMorphoShares = depositAmount * 10 ** OFFSET;
 
-        assertGt(
+        assertEq(
             morphoBalanceAfter,
-            morphoBalanceBefore,
-            "Morpho shares should increase"
+            expectedMorphoShares,
+            "Morpho shares should include offset multiplication"
         );
     }
 
@@ -184,10 +202,13 @@ contract MorphoVaultUnitTest is Test {
     }
 
     function test_FirstDeposit_SuccessIf_MinimumMet() public {
-        vm.prank(alice);
-        uint256 shares = vault.deposit(1000, alice);
+        uint256 depositAmount = 1000;
+        uint256 expectedShares = depositAmount * 10 ** vault.OFFSET();
 
-        assertGt(shares, 0);
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        assertEq(shares, expectedShares, "Should receive exact shares");
         assertEq(vault.balanceOf(alice), shares);
     }
 
@@ -195,10 +216,17 @@ contract MorphoVaultUnitTest is Test {
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
 
-        vm.prank(bob);
-        uint256 shares = vault.deposit(1, bob);
+        uint256 smallDeposit = 1;
+        uint256 expectedShares = vault.previewDeposit(smallDeposit);
 
-        assertGt(shares, 0, "Should allow small second deposit");
+        vm.prank(bob);
+        uint256 shares = vault.deposit(smallDeposit, bob);
+
+        assertEq(
+            shares,
+            expectedShares,
+            "Should receive calculated shares for small deposit"
+        );
     }
 
     function test_Withdraw_Basic() public {
@@ -206,6 +234,7 @@ contract MorphoVaultUnitTest is Test {
         vault.deposit(100_000e6, alice);
 
         uint256 withdrawAmount = 10_000e6;
+        uint256 expectedShares = vault.previewWithdraw(withdrawAmount);
         uint256 aliceBalanceBefore = usdc.balanceOf(alice);
 
         vm.prank(alice);
@@ -213,7 +242,7 @@ contract MorphoVaultUnitTest is Test {
 
         uint256 aliceBalanceAfter = usdc.balanceOf(alice);
 
-        assertGt(shares, 0, "Should burn shares");
+        assertEq(shares, expectedShares, "Should burn exact calculated shares");
         assertApproxEqAbs(
             aliceBalanceAfter - aliceBalanceBefore,
             withdrawAmount,
@@ -226,12 +255,20 @@ contract MorphoVaultUnitTest is Test {
         vm.prank(alice);
         uint256 initialShares = vault.deposit(50_000e6, alice);
 
+        uint256 withdrawAmount = 5_000e6;
+        uint256 sharesBurned = vault.previewWithdraw(withdrawAmount);
+
         vm.prank(alice);
-        vault.withdraw(5_000e6, alice, alice);
+        vault.withdraw(withdrawAmount, alice, alice);
 
         uint256 remainingShares = vault.balanceOf(alice);
+        uint256 expectedRemainingShares = initialShares - sharesBurned;
 
-        assertGt(remainingShares, 0, "Should have remaining shares");
+        assertEq(
+            remainingShares,
+            expectedRemainingShares,
+            "Should have exact remaining shares"
+        );
         assertApproxEqRel(
             remainingShares,
             (initialShares * 9) / 10,
@@ -300,8 +337,13 @@ contract MorphoVaultUnitTest is Test {
         uint256 assets = vault.redeem(sharesToRedeem, alice, alice);
 
         uint256 aliceBalanceAfter = usdc.balanceOf(alice);
+        uint256 expectedAssets = vault.previewRedeem(sharesToRedeem);
 
-        assertGt(assets, 0);
+        assertEq(
+            assets,
+            expectedAssets,
+            "Should receive exact calculated assets"
+        );
         assertApproxEqAbs(aliceBalanceAfter - aliceBalanceBefore, assets, 2);
         assertEq(vault.balanceOf(alice), totalShares - sharesToRedeem);
     }
@@ -312,19 +354,29 @@ contract MorphoVaultUnitTest is Test {
 
         vm.prank(alice);
         uint256 assets = vault.redeem(totalShares, alice, alice);
+        uint256 expectedAssets = vault.previewRedeem(totalShares);
 
-        assertGt(assets, 0);
+        assertEq(
+            assets,
+            expectedAssets,
+            "Should receive exact calculated assets"
+        );
         assertEq(vault.balanceOf(alice), 0, "Should have no shares left");
         assertApproxEqAbs(usdc.balanceOf(alice), INITIAL_BALANCE, 2);
     }
 
     function test_Mint_Basic() public {
         uint256 sharesToMint = 10_000e6;
+        uint256 expectedAssets = vault.previewMint(sharesToMint);
 
         vm.prank(alice);
         uint256 assets = vault.mint(sharesToMint, alice);
 
-        assertGt(assets, 0);
+        assertEq(
+            assets,
+            expectedAssets,
+            "Should require exact calculated assets"
+        );
         assertEq(vault.balanceOf(alice), sharesToMint);
         assertApproxEqAbs(vault.totalAssets(), assets, 1);
     }
@@ -389,15 +441,27 @@ contract MorphoVaultUnitTest is Test {
     }
 
     function test_GetMorphoPosition() public {
+        uint256 depositAmount = 50_000e6;
         vm.prank(alice);
-        vault.deposit(50_000e6, alice);
+        vault.deposit(depositAmount, alice);
 
-        (uint256 shares, uint256 assets, uint256 price) = vault
-            .getMorphoPosition();
+        (uint256 shares, uint256 assets, ) = vault.getMorphoPosition();
 
-        assertGt(shares, 0);
-        assertApproxEqAbs(assets, 50_000e6, 1);
-        assertApproxEqAbs(price, 1e18, 0.01e18);
+        // MockMetaMorpho теперь также использует OFFSET, поэтому первый депозит дает:
+        // morphoShares = depositAmount * 10^OFFSET
+        uint256 expectedMorphoShares = depositAmount * 10 ** OFFSET;
+
+        assertEq(
+            shares,
+            expectedMorphoShares,
+            "Morpho shares should include offset multiplication"
+        );
+        assertApproxEqAbs(
+            assets,
+            depositAmount,
+            1,
+            "Morpho assets should equal deposited amount"
+        );
     }
 
     function test_MaxWithdrawable() public {
@@ -476,6 +540,142 @@ contract MorphoVaultUnitTest is Test {
         uint256 assets = vault.convertToAssets(shares);
 
         assertApproxEqAbs(assets, 20_000e6, 5);
+    }
+
+    function test_Withdraw_DelegatedWithApproval() public {
+        // Setup: Alice deposits
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        uint256 withdrawAmount = 10_000e6;
+        uint256 requiredShares = vault.previewWithdraw(withdrawAmount);
+
+        // Alice approves Bob to spend her shares
+        vm.prank(alice);
+        vault.approve(bob, requiredShares);
+
+        uint256 bobUsdcBefore = usdc.balanceOf(bob);
+        uint256 aliceSharesBefore = vault.balanceOf(alice);
+
+        // Bob withdraws Alice's shares, assets go to Bob
+        vm.prank(bob);
+        uint256 sharesBurned = vault.withdraw(withdrawAmount, bob, alice);
+
+        uint256 bobUsdcAfter = usdc.balanceOf(bob);
+        uint256 aliceSharesAfter = vault.balanceOf(alice);
+
+        // Verify results
+        assertEq(sharesBurned, requiredShares, "Should burn expected shares");
+        assertEq(
+            aliceSharesAfter,
+            aliceSharesBefore - sharesBurned,
+            "Alice shares should decrease"
+        );
+        assertApproxEqAbs(
+            bobUsdcAfter - bobUsdcBefore,
+            withdrawAmount,
+            2,
+            "Bob should receive assets"
+        );
+        assertEq(
+            vault.allowance(alice, bob),
+            0,
+            "Allowance should be consumed"
+        );
+    }
+
+    function test_Withdraw_DelegatedRevertIf_InsufficientAllowance() public {
+        // Setup: Alice deposits
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        uint256 withdrawAmount = 10_000e6;
+        uint256 requiredShares = vault.previewWithdraw(withdrawAmount);
+
+        // Alice approves Bob for less than required
+        vm.prank(alice);
+        vault.approve(bob, requiredShares - 1);
+
+        // Bob tries to withdraw more than approved
+        vm.expectRevert();
+        vm.prank(bob);
+        vault.withdraw(withdrawAmount, bob, alice);
+    }
+
+    function test_Withdraw_DelegatedRevertIf_NoApproval() public {
+        // Setup: Alice deposits
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        // Bob tries to withdraw without approval
+        vm.expectRevert();
+        vm.prank(bob);
+        vault.withdraw(10_000e6, bob, alice);
+    }
+
+    function test_Withdraw_SelfDoesNotRequireApproval() public {
+        // Setup: Alice deposits
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        uint256 withdrawAmount = 10_000e6;
+        uint256 expectedShares = vault.previewWithdraw(withdrawAmount);
+        uint256 aliceUsdcBefore = usdc.balanceOf(alice);
+
+        // Alice withdraws her own shares (no approval needed)
+        vm.prank(alice);
+        uint256 sharesBurned = vault.withdraw(withdrawAmount, alice, alice);
+
+        uint256 aliceUsdcAfter = usdc.balanceOf(alice);
+
+        assertEq(
+            sharesBurned,
+            expectedShares,
+            "Should burn exact calculated shares"
+        );
+        assertApproxEqAbs(
+            aliceUsdcAfter - aliceUsdcBefore,
+            withdrawAmount,
+            2,
+            "Alice should receive assets"
+        );
+    }
+
+    function test_Withdraw_DelegatedWithUnlimitedApproval() public {
+        // Setup: Alice deposits
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        // Alice gives unlimited approval to Bob
+        vm.prank(alice);
+        vault.approve(bob, type(uint256).max);
+
+        uint256 withdrawAmount = 10_000e6;
+        uint256 expectedShares = vault.previewWithdraw(withdrawAmount);
+        uint256 bobUsdcBefore = usdc.balanceOf(bob);
+
+        // Bob withdraws, should work with unlimited approval
+        vm.prank(bob);
+        uint256 sharesBurned = vault.withdraw(withdrawAmount, bob, alice);
+
+        uint256 bobUsdcAfter = usdc.balanceOf(bob);
+
+        assertEq(
+            sharesBurned,
+            expectedShares,
+            "Should burn exact calculated shares"
+        );
+        assertApproxEqAbs(
+            bobUsdcAfter - bobUsdcBefore,
+            withdrawAmount,
+            2,
+            "Bob should receive assets"
+        );
+        assertEq(
+            vault.allowance(alice, bob),
+            type(uint256).max,
+            "Unlimited allowance should remain"
+        );
     }
 
     function _dealAndApprove(address user, uint256 amount) internal {

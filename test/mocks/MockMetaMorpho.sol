@@ -11,14 +11,18 @@ contract MockMetaMorpho is ERC4626 {
 
     uint256 public yieldRate = 1000;
     uint256 public liquidityCap = type(uint256).max;
+    uint8 private immutable _offset;
 
     event YieldAccrued(uint256 amount);
 
     constructor(
         IERC20 asset_,
         string memory name_,
-        string memory symbol_
-    ) ERC4626(asset_) ERC20(name_, symbol_) {}
+        string memory symbol_,
+        uint8 offset_
+    ) ERC4626(asset_) ERC20(name_, symbol_) {
+        _offset = offset_;
+    }
 
 
     function setYieldRate(uint256 rate) external {
@@ -45,5 +49,9 @@ contract MockMetaMorpho is ERC4626 {
     function maxRedeem(address owner) public view override returns (uint256) {
         uint256 maxAssets = maxWithdraw(owner);
         return convertToShares(maxAssets);
+    }
+
+    function _decimalsOffset() internal view override returns (uint8) {
+        return _offset;
     }
 }

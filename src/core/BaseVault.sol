@@ -106,84 +106,99 @@ abstract contract BaseVault is
     /* ========== ERC4626 OVERRIDES ========== */
 
     function deposit(
-        uint256 assets,
-        address receiver
+        uint256 assetsToDeposit,
+        address shareReceiver
     )
         public
         virtual
         override
         nonReentrant
         whenNotPaused
-        returns (uint256 shares)
+        returns (uint256 sharesMinted)
     {
-        if (assets == 0) revert ZeroAmount();
-        if (receiver == address(0)) revert ZeroAddress();
+        if (assetsToDeposit == 0) revert ZeroAmount();
+        if (shareReceiver == address(0)) revert ZeroAddress();
 
-        if (totalSupply() == 0 && assets < minFirstDeposit) {
-            revert FirstDepositTooSmall(minFirstDeposit, assets);
+        if (totalSupply() == 0 && assetsToDeposit < minFirstDeposit) {
+            revert FirstDepositTooSmall(minFirstDeposit, assetsToDeposit);
         }
 
         _harvestFees();
 
-        shares = previewDeposit(assets);
-        if (shares == 0) revert ZeroAmount();
+        sharesMinted = previewDeposit(assetsToDeposit);
+        if (sharesMinted == 0) revert ZeroAmount();
 
         SafeERC20.safeTransferFrom(
             IERC20(asset()),
             msg.sender,
             address(this),
-            assets
+            assetsToDeposit
         );
 
-        _depositToProtocol(assets, receiver);
-        _mint(receiver, shares);
+        _depositToProtocol(assetsToDeposit, shareReceiver);
+        _mint(shareReceiver, sharesMinted);
+
         lastTotalAssets = totalAssets();
 
-        emit Deposited(msg.sender, receiver, assets, shares);
+        emit Deposited(
+            msg.sender,
+            shareReceiver,
+            assetsToDeposit,
+            sharesMinted
+        );
     }
 
     function withdraw(
-        uint256 assetsRequested,
-        address receiver,
-        address owner
+        uint256 assetsToWithdraw,
+        address assetReceiver,
+        address shareOwner
     )
         public
         virtual
         override
         nonReentrant
         whenNotPaused
-        returns (uint256 shares)
+        returns (uint256 sharesBurned)
     {
-        if (assetsRequested == 0) revert ZeroAmount();
-        if (receiver == address(0)) revert ZeroAddress();
+        if (assetsToWithdraw == 0) revert ZeroAmount();
+        if (assetReceiver == address(0)) revert ZeroAddress();
 
         _harvestFees();
 
-        shares = previewWithdraw(assetsRequested);
-        if (shares == 0) revert ZeroAmount();
-        if (shares > balanceOf(owner)) {
-            revert InsufficientShares(shares, balanceOf(owner));
+        sharesBurned = previewWithdraw(assetsToWithdraw);
+        if (sharesBurned == 0) revert ZeroAmount();
+        if (sharesBurned > balanceOf(shareOwner)) {
+            revert InsufficientShares(sharesBurned, balanceOf(shareOwner));
         }
 
-        if (msg.sender != owner) {
-            _spendAllowance(owner, msg.sender, shares);
+        if (msg.sender != shareOwner) {
+            _spendAllowance(shareOwner, msg.sender, sharesBurned);
         }
 
-        _burn(owner, shares);
+        _burn(shareOwner, sharesBurned);
 
-        uint256 assetsWithdrawn = _withdrawFromProtocol(
-            assetsRequested,
-            receiver,
-            owner
+        uint256 actualAssetsWithdrawn = _withdrawFromProtocol(
+            assetsToWithdraw,
+            assetReceiver,
+            shareOwner
         );
 
-        if (assetsWithdrawn < assetsRequested) {
-            revert InsufficientLiquidity(assetsRequested, assetsWithdrawn);
+        if (actualAssetsWithdrawn < assetsToWithdraw) {
+            revert InsufficientLiquidity(
+                assetsToWithdraw,
+                actualAssetsWithdrawn
+            );
         }
 
         lastTotalAssets = totalAssets();
 
-        emit Withdrawn(msg.sender, receiver, owner, assetsWithdrawn, shares);
+        emit Withdrawn(
+            msg.sender,
+            assetReceiver,
+            shareOwner,
+            actualAssetsWithdrawn,
+            sharesBurned
+        );
     }
 
     function redeem(
