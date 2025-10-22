@@ -11,7 +11,7 @@ import {Morpho} from "src/adapters/Morpho.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 
-contract MorphoConnectorUnitTest is Test {
+contract MorphoAdapterUnitTest is Test {
     Morpho public vault;
     MockMetaMorpho public morpho;
     MockERC20 public usdc;
@@ -634,5 +634,272 @@ contract MorphoConnectorUnitTest is Test {
         usdc.mint(user, amount);
         vm.prank(user);
         usdc.approve(address(vault), amount);
+    }
+
+    /* ========== PERMIT TESTS ========== */
+
+    function test_Permit_Basic() public {
+        uint256 ownerPrivateKey = 0xA11CE;
+        address owner = vm.addr(ownerPrivateKey);
+
+        usdc.mint(owner, 100_000e6);
+        vm.prank(owner);
+        usdc.approve(address(vault), type(uint256).max);
+        vm.prank(owner);
+        vault.deposit(100_000e6, owner);
+
+        uint256 amount = 10_000e6;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        uint256 nonce = vault.nonces(owner);
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                ),
+                owner,
+                bob,
+                amount,
+                nonce,
+                deadline
+            )
+        );
+
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+
+        vault.permit(owner, bob, amount, deadline, v, r, s);
+
+        assertEq(
+            vault.allowance(owner, bob),
+            amount,
+            "Allowance should be set"
+        );
+        assertEq(vault.nonces(owner), nonce + 1, "Nonce should increment");
+    }
+
+    function test_Permit_WithdrawAfterPermit() public {
+        uint256 ownerPrivateKey = 0xA11CE;
+        address owner = vm.addr(ownerPrivateKey);
+
+        usdc.mint(owner, 100_000e6);
+        vm.prank(owner);
+        usdc.approve(address(vault), type(uint256).max);
+        vm.prank(owner);
+        vault.deposit(100_000e6, owner);
+
+        uint256 withdrawAmount = 10_000e6;
+        uint256 requiredShares = vault.previewWithdraw(withdrawAmount);
+        uint256 deadline = block.timestamp + 1 hours;
+
+        uint256 nonce = vault.nonces(owner);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                ),
+                owner,
+                bob,
+                requiredShares,
+                nonce,
+                deadline
+            )
+        );
+
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+
+        vault.permit(owner, bob, requiredShares, deadline, v, r, s);
+
+        uint256 bobUsdcBefore = usdc.balanceOf(bob);
+
+        vm.prank(bob);
+        vault.withdraw(withdrawAmount, bob, owner);
+
+        uint256 bobUsdcAfter = usdc.balanceOf(bob);
+
+        assertApproxEqAbs(
+            bobUsdcAfter - bobUsdcBefore,
+            withdrawAmount,
+            2,
+            "Bob should receive assets after permit"
+        );
+    }
+
+    function test_Permit_RevertIf_Expired() public {
+        uint256 ownerPrivateKey = 0xA11CE;
+        address owner = vm.addr(ownerPrivateKey);
+
+        uint256 amount = 10_000e6;
+        uint256 deadline = block.timestamp - 1; // Already expired
+
+        uint256 nonce = vault.nonces(owner);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                ),
+                owner,
+                bob,
+                amount,
+                nonce,
+                deadline
+            )
+        );
+
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+
+        vm.expectRevert();
+        vault.permit(owner, bob, amount, deadline, v, r, s);
+    }
+
+    function test_Permit_RevertIf_InvalidSignature() public {
+        uint256 ownerPrivateKey = 0xA11CE;
+        address owner = vm.addr(ownerPrivateKey);
+
+        uint256 amount = 10_000e6;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        uint256 nonce = vault.nonces(owner);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                ),
+                owner,
+                bob,
+                amount,
+                nonce,
+                deadline
+            )
+        );
+
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
+        );
+
+        uint256 wrongPrivateKey = 0xBADBAD;
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPrivateKey, digest);
+
+        vm.expectRevert();
+        vault.permit(owner, bob, amount, deadline, v, r, s);
+    }
+
+    function test_Permit_RevertIf_ReplayAttack() public {
+        uint256 ownerPrivateKey = 0xA11CE;
+        address owner = vm.addr(ownerPrivateKey);
+
+        uint256 amount = 10_000e6;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        uint256 nonce = vault.nonces(owner);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                ),
+                owner,
+                bob,
+                amount,
+                nonce,
+                deadline
+            )
+        );
+
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+
+        vault.permit(owner, bob, amount, deadline, v, r, s);
+        assertEq(vault.allowance(owner, bob), amount);
+
+        vm.expectRevert();
+        vault.permit(owner, bob, amount, deadline, v, r, s);
+    }
+
+    function test_Permit_Nonces_Increment() public {
+        uint256 ownerPrivateKey = 0xA11CE;
+        address owner = vm.addr(ownerPrivateKey);
+
+        uint256 initialNonce = vault.nonces(owner);
+        assertEq(initialNonce, 0, "Initial nonce should be 0");
+
+        uint256 amount = 10_000e6;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        _permitHelper(ownerPrivateKey, owner, bob, amount, 0, deadline);
+        assertEq(
+            vault.nonces(owner),
+            1,
+            "Nonce should be 1 after first permit"
+        );
+
+        _permitHelper(ownerPrivateKey, owner, alice, amount, 1, deadline);
+        assertEq(
+            vault.nonces(owner),
+            2,
+            "Nonce should be 2 after second permit"
+        );
+    }
+
+    function _permitHelper(
+        uint256 ownerPrivateKey,
+        address owner,
+        address spender,
+        uint256 amount,
+        uint256 nonce,
+        uint256 deadline
+    ) internal {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                ),
+                owner,
+                spender,
+                amount,
+                nonce,
+                deadline
+            )
+        );
+
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+        vault.permit(owner, spender, amount, deadline, v, r, s);
+    }
+
+    function test_Permit_DomainSeparator() public view {
+        bytes32 domainSeparator = vault.DOMAIN_SEPARATOR();
+
+        // Calculate expected domain separator according to EIP-712
+        bytes32 expectedDomainSeparator = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes(vault.name())),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(vault)
+            )
+        );
+
+        assertEq(domainSeparator, expectedDomainSeparator);
     }
 }

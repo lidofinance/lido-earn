@@ -6,12 +6,19 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-abstract contract Vault is ERC4626, AccessControl, ReentrancyGuard, Pausable {
+abstract contract Vault is
+    ERC4626,
+    ERC20Permit,
+    AccessControl,
+    ReentrancyGuard,
+    Pausable
+{
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -80,7 +87,7 @@ abstract contract Vault is ERC4626, AccessControl, ReentrancyGuard, Pausable {
         uint8 offset_,
         string memory name_,
         string memory symbol_
-    ) ERC4626(asset_) ERC20(name_, symbol_) {
+    ) ERC4626(asset_) ERC20(name_, symbol_) ERC20Permit(name_) {
         if (address(asset_) == address(0)) revert ZeroAddress();
         if (treasury_ == address(0)) revert ZeroAddress();
         if (rewardFee_ > MAX_REWARD_FEE) revert InvalidFee(rewardFee_);
@@ -409,7 +416,7 @@ abstract contract Vault is ERC4626, AccessControl, ReentrancyGuard, Pausable {
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function decimals() public view virtual override returns (uint8) {
+    function decimals() public view virtual override(ERC20, ERC4626) returns (uint8) {
         return IERC20Metadata(asset()).decimals();
     }
 
