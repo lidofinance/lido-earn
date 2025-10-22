@@ -206,6 +206,24 @@ contract VaultWithdrawTest is VaultTestBase {
         assertEq(vault.allowance(alice, bob), type(uint256).max);
     }
 
+    function test_Withdraw_UpdatesLastTotalAssets() public {
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        asset.mint(address(vault), 20_000e6);
+
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        vm.prank(alice);
+        uint256 sharesBurned = vault.withdraw(10_000e6, alice, alice);
+
+        uint256 assetsAfter = vault.totalAssets();
+
+        assertEq(sharesBurned, vault.previewWithdraw(10_000e6));
+        assertEq(vault.lastTotalAssets(), assetsAfter);
+        assertEq(totalAssetsBefore - assetsAfter, 10_000e6);
+    }
+
     function test_Redeem_Basic() public {
         vm.prank(alice);
         uint256 totalShares = vault.deposit(100_000e6, alice);
@@ -235,6 +253,22 @@ contract VaultWithdrawTest is VaultTestBase {
         assertEq(assets, expectedAssets);
         assertEq(vault.balanceOf(alice), 0);
         assertEq(asset.balanceOf(alice), INITIAL_BALANCE);
+    }
+
+    function test_Redeem_UpdatesLastTotalAssets() public {
+        vm.prank(alice);
+        uint256 totalShares = vault.deposit(100_000e6, alice);
+
+        asset.mint(address(vault), 20_000e6);
+
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 sharesToRedeem = totalShares / 4;
+
+        vm.prank(alice);
+        uint256 assetsRedeemed = vault.redeem(sharesToRedeem, alice, alice);
+
+        assertEq(vault.lastTotalAssets(), vault.totalAssets());
+        assertEq(vault.totalAssets(), totalAssetsBefore - assetsRedeemed);
     }
 
     function test_Redeem_RevertIf_ZeroShares() public {
