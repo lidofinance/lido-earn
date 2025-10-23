@@ -48,7 +48,7 @@ import {RewardDistributor} from "src/RewardDistributor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {RewardDistributionHandler} from "./handlers/RewardDistributionHandler.sol";
 
-contract VaultRewardDistributionInvariantTest is Test {
+contract RewardDistributionInvariantTest is Test {
     MorphoAdapter public vault;
     MockMetaMorpho public morpho;
     MockERC20 public usdc;
