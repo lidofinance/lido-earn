@@ -8,7 +8,7 @@ import {IMetaMorpho} from "@morpho/interfaces/IMetaMorpho.sol";
 
 import {Vault} from "../Vault.sol";
 
-contract Morpho is Vault {
+contract MorphoAdapter is Vault {
     using SafeERC20 for IERC20;
     using Math for uint256;
 

@@ -7,12 +7,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {Vault} from "src/Vault.sol";
-import {Morpho} from "src/adapters/Morpho.sol";
+import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 
 contract MorphoAdapterUnitTest is Test {
-    Morpho public vault;
+    MorphoAdapter public vault;
     MockMetaMorpho public morpho;
     MockERC20 public usdc;
 
@@ -48,7 +48,7 @@ contract MorphoAdapterUnitTest is Test {
             OFFSET
         );
 
-        vault = new Morpho(
+        vault = new MorphoAdapter(
             address(usdc),
             address(morpho),
             treasury,

@@ -403,7 +403,13 @@ abstract contract Vault is
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function decimals() public view virtual override(ERC20, ERC4626) returns (uint8) {
+    function decimals()
+        public
+        view
+        virtual
+        override(ERC20, ERC4626)
+        returns (uint8)
+    {
         return IERC20Metadata(asset()).decimals();
     }
 

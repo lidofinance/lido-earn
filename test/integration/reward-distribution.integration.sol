@@ -6,13 +6,13 @@ import "forge-std/console.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {Morpho} from "src/adapters/Morpho.sol";
+import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {RewardDistributor} from "src/RewardDistributor.sol";
 
 contract RewardDistributionIntegrationTest is Test {
-    Morpho public vault;
+    MorphoAdapter public vault;
     MockMetaMorpho public morpho;
     MockERC20 public usdc;
     RewardDistributor public rewardDistributor;
@@ -53,7 +53,7 @@ contract RewardDistributionIntegrationTest is Test {
             basisPoints
         );
 
-        vault = new Morpho(
+        vault = new MorphoAdapter(
             address(usdc),
             address(morpho),
             address(rewardDistributor),

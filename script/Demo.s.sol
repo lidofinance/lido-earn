@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {Morpho} from "src/adapters/Morpho.sol";
+import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {RewardDistributor} from "src/RewardDistributor.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
@@ -24,7 +24,7 @@ contract DemoDeploy is Script {
     MockERC20 public token;
     MockMetaMorpho public morphoVault;
     RewardDistributor public rewardDistributor;
-    Morpho public vault;
+    MorphoAdapter public vault;
 
     function setUp() public {}
 
@@ -77,7 +77,7 @@ contract DemoDeploy is Script {
 
         // 4. Deploy MorphoVault
         console.log("4. Deploying MorphoVault...");
-        vault = new Morpho(
+        vault = new MorphoAdapter(
             address(token),
             address(morphoVault),
             address(rewardDistributor),
