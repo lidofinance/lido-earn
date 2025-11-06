@@ -206,7 +206,6 @@ abstract contract Vault is
         virtual
         override
         nonReentrant
-        whenNotPaused
         returns (uint256 sharesBurned)
     {
         if (assetsToWithdraw == 0) revert ZeroAmount();
@@ -256,7 +255,6 @@ abstract contract Vault is
         virtual
         override
         nonReentrant
-        whenNotPaused
         returns (uint256 assetsWithdrawn)
     {
         if (sharesToRedeem == 0) revert ZeroAmount();

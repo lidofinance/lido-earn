@@ -157,15 +157,19 @@ contract VaultWithdrawTest is VaultTestBase {
         vault.withdraw(withdrawAmount, bob, alice);
     }
 
-    function test_Withdraw_RevertIf_Paused() public {
+    function test_Withdraw_WorksWhenPaused() public {
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
 
         vault.pause();
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
+        uint256 aliceBalanceBefore = asset.balanceOf(alice);
+
         vm.prank(alice);
-        vault.withdraw(10_000e6, alice, alice);
+        vault.withdraw(5_000e6, alice, alice);
+
+        uint256 aliceBalanceAfter = asset.balanceOf(alice);
+        assertEq(aliceBalanceAfter - aliceBalanceBefore, 5_000e6);
     }
 
     function test_Withdraw_SelfDoesNotRequireApproval() public {
@@ -327,15 +331,20 @@ contract VaultWithdrawTest is VaultTestBase {
         assertEq(asset.balanceOf(bob) - bobAssetBefore, assets);
     }
 
-    function test_Redeem_RevertIf_Paused() public {
+    function test_Redeem_WorksWhenPaused() public {
         vm.prank(alice);
         uint256 shares = vault.deposit(10_000e6, alice);
 
         vault.pause();
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
+        uint256 aliceBalanceBefore = asset.balanceOf(alice);
+
         vm.prank(alice);
-        vault.redeem(shares / 10, alice, alice);
+        uint256 assets = vault.redeem(shares / 10, alice, alice);
+
+        uint256 aliceBalanceAfter = asset.balanceOf(alice);
+        assertEq(aliceBalanceAfter - aliceBalanceBefore, assets);
+        assertGt(assets, 0);
     }
 
     function test_Redeem_RevertIf_InsufficientShares() public {

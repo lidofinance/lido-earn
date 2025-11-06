@@ -115,4 +115,38 @@ contract VaultEmergencyTest is VaultTestBase {
 
         assertEq(asset.balanceOf(receiver), totalAssets);
     }
+
+    function test_EmergencyWithdraw_UsersCanWithdrawAfter() public {
+        vm.prank(alice);
+        uint256 aliceShares = vault.deposit(100_000e6, alice);
+
+        address receiver = makeAddr("receiver");
+        vault.emergencyWithdraw(receiver);
+
+        assertTrue(vault.paused());
+
+        asset.mint(address(vault), 100_000e6);
+
+        uint256 aliceBalanceBefore = asset.balanceOf(alice);
+
+        vm.prank(alice);
+        vault.redeem(aliceShares, alice, alice);
+
+        uint256 aliceBalanceAfter = asset.balanceOf(alice);
+        assertGt(aliceBalanceAfter - aliceBalanceBefore, 0);
+    }
+
+    function test_EmergencyWithdraw_BlocksNewDeposits() public {
+        vm.prank(alice);
+        vault.deposit(50_000e6, alice);
+
+        address receiver = makeAddr("receiver");
+        vault.emergencyWithdraw(receiver);
+
+        assertTrue(vault.paused());
+
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        vm.prank(bob);
+        vault.deposit(10_000e6, bob);
+    }
 }

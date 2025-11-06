@@ -13,6 +13,9 @@ docs/
 # Dotenv file
 .env
 
+dev/
+.claude/
+.claudecode/
 AGENTS.md
 CLAUDE.md
 todo.md

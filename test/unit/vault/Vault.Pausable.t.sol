@@ -73,26 +73,35 @@ contract VaultPausableTest is VaultTestBase {
         vault.mint(10_000e6, alice);
     }
 
-    function test_Pause_BlocksWithdraw() public {
+    function test_Pause_AllowsWithdraw() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
         vault.pause();
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
+        uint256 aliceBalanceBefore = asset.balanceOf(alice);
+
         vm.prank(alice);
         vault.withdraw(10_000e6, alice, alice);
+
+        uint256 aliceBalanceAfter = asset.balanceOf(alice);
+        assertEq(aliceBalanceAfter - aliceBalanceBefore, 10_000e6);
     }
 
-    function test_Pause_BlocksRedeem() public {
+    function test_Pause_AllowsRedeem() public {
         vm.prank(alice);
         uint256 shares = vault.deposit(100_000e6, alice);
 
         vault.pause();
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
+        uint256 aliceBalanceBefore = asset.balanceOf(alice);
+
         vm.prank(alice);
-        vault.redeem(shares / 10, alice, alice);
+        uint256 assets = vault.redeem(shares / 10, alice, alice);
+
+        uint256 aliceBalanceAfter = asset.balanceOf(alice);
+        assertEq(aliceBalanceAfter - aliceBalanceBefore, assets);
+        assertGt(assets, 0);
     }
 
     function test_Unpause_AllowsOperations() public {
