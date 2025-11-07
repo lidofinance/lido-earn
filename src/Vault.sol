@@ -26,6 +26,7 @@ abstract contract Vault is
 
     uint256 public constant MAX_BASIS_POINTS = 10_000;
     uint256 public constant MAX_REWARD_FEE_BASIS_POINTS = 2_000;
+    uint256 public constant MIN_FIRST_DEPOSIT = 1_000;
     uint8 public constant MAX_OFFSET = 23;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -35,7 +36,6 @@ abstract contract Vault is
     /* ========== STATE VARIABLES ========== */
 
     uint256 public lastTotalAssets;
-    uint256 public minFirstDeposit;
     address public immutable TREASURY;
     uint8 public immutable OFFSET;
     uint16 public rewardFee;
@@ -64,7 +64,6 @@ abstract contract Vault is
     );
 
     event RewardFeeUpdated(uint256 oldFee, uint256 newFee);
-    event MinFirstDepositUpdated(uint256 oldMin, uint256 newMin);
     event EmergencyWithdrawal(address indexed receiver, uint256 amount);
 
     /* ========== ERRORS ========== */
@@ -98,7 +97,6 @@ abstract contract Vault is
         OFFSET = offset_;
 
         rewardFee = rewardFee_;
-        minFirstDeposit = 1000;
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
@@ -122,8 +120,8 @@ abstract contract Vault is
         if (assetsToDeposit == 0) revert ZeroAmount();
         if (shareReceiver == address(0)) revert ZeroAddress();
 
-        if (totalSupply() == 0 && assetsToDeposit < minFirstDeposit) {
-            revert FirstDepositTooSmall(minFirstDeposit, assetsToDeposit);
+        if (totalSupply() == 0 && assetsToDeposit < MIN_FIRST_DEPOSIT) {
+            revert FirstDepositTooSmall(MIN_FIRST_DEPOSIT, assetsToDeposit);
         }
 
         _harvestFees();
@@ -174,8 +172,8 @@ abstract contract Vault is
 
         assetsRequired = previewMint(sharesToMint);
         if (assetsRequired == 0) revert ZeroAmount();
-        if (totalSupply() == 0 && assetsRequired < minFirstDeposit) {
-            revert FirstDepositTooSmall(minFirstDeposit, assetsRequired);
+        if (totalSupply() == 0 && assetsRequired < MIN_FIRST_DEPOSIT) {
+            revert FirstDepositTooSmall(MIN_FIRST_DEPOSIT, assetsRequired);
         }
 
         SafeERC20.safeTransferFrom(
@@ -354,15 +352,6 @@ abstract contract Vault is
         return OFFSET;
     }
 
-    function setMinFirstDeposit(
-        uint256 amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 oldMin = minFirstDeposit;
-        minFirstDeposit = amount;
-
-        emit MinFirstDepositUpdated(oldMin, amount);
-    }
-
     /* ========== PAUSE MECHANISM ========== */
 
     function pause() external onlyRole(PAUSER_ROLE) {
@@ -382,6 +371,8 @@ abstract contract Vault is
         _pause();
 
         amount = _emergencyWithdrawFromProtocol(receiver);
+        lastTotalAssets = totalAssets();
+
         emit EmergencyWithdrawal(receiver, amount);
     }
 
@@ -413,19 +404,5 @@ abstract contract Vault is
         );
         if (feeAmount > profit) feeAmount = profit;
         return feeAmount;
-    }
-
-    function getVaultConfig()
-        external
-        view
-        returns (
-            address treasury,
-            uint256 currentRewardFee,
-            uint256 currentMinFirstDeposit,
-            uint8 currentOffset,
-            bool isPaused
-        )
-    {
-        return (TREASURY, rewardFee, minFirstDeposit, OFFSET, paused());
     }
 }

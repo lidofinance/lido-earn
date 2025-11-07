@@ -149,4 +149,23 @@ contract VaultEmergencyTest is VaultTestBase {
         vm.prank(bob);
         vault.deposit(10_000e6, bob);
     }
+
+    function testFuzz_EmergencyWithdraw_ResetsLastTotalAssets(
+        uint96 amount
+    ) public {
+        vm.assume(amount > vault.MIN_FIRST_DEPOSIT());
+        asset.mint(alice, amount);
+
+        vm.prank(alice);
+        vault.deposit(amount, alice);
+
+        assertEq(vault.totalAssets(), vault.lastTotalAssets());
+        assertGt(vault.lastTotalAssets(), 0);
+
+        address receiver = makeAddr("receiver");
+        vault.emergencyWithdraw(receiver);
+
+        assertEq(vault.totalAssets(), 0);
+        assertEq(vault.lastTotalAssets(), 0);
+    }
 }

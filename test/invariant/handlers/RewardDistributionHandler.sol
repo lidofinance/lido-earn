@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import "forge-std/Test.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
@@ -13,6 +14,8 @@ import {RewardDistributor} from "src/RewardDistributor.sol";
  * @dev Executes vault operations and tracks reward distribution state
  */
 contract RewardDistributionHandler is Test {
+    using Math for uint256;
+
     MorphoAdapter public vault;
     MockERC20 public asset;
     MockMetaMorpho public morpho;
@@ -116,7 +119,11 @@ contract RewardDistributionHandler is Test {
             totalProfitHarvested += profit;
 
             if (supply > 0 && profit > 0 && totalAssetsBefore > 0) {
-                uint256 feeAmount = (profit * vault.rewardFee()) / 10000;
+                uint256 feeAmount = profit.mulDiv(
+                    vault.rewardFee(),
+                    vault.MAX_BASIS_POINTS(),
+                    Math.Rounding.Ceil
+                );
 
                 if (feeAmount > 0 && feeAmount < totalAssetsBefore) {
                     uint256 expectedTreasuryShares = (feeAmount * supply) /

@@ -448,22 +448,6 @@ contract MorphoAdapterUnitTest is Test {
         assertApproxEqAbs(maxWithdraw, 100_000e6, 1);
     }
 
-    function test_GetVaultConfig() public view {
-        (
-            address treasury_,
-            uint256 rewardFee_,
-            uint256 minFirstDeposit_,
-            uint8 offset_,
-            bool isPaused_
-        ) = vault.getVaultConfig();
-
-        assertEq(treasury_, treasury);
-        assertEq(rewardFee_, REWARD_FEE);
-        assertEq(minFirstDeposit_, 1000);
-        assertEq(offset_, OFFSET);
-        assertEq(isPaused_, false);
-    }
-
     function test_DepositWithdraw_RoundingDoesNotCauseLoss() public {
         vm.prank(alice);
         vault.deposit(1000, alice);

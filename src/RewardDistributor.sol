@@ -9,9 +9,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract RewardDistributor is AccessControl {
     using SafeERC20 for IERC20;
 
-    uint256 public constant MAX_BPS = 10_000;
-
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+    uint256 public constant MAX_BASIS_POINTS = 10_000;
 
     struct Recipient {
         address account;
@@ -69,7 +68,7 @@ contract RewardDistributor is AccessControl {
             totalBps += _basisPoints[i];
         }
 
-        if (totalBps != MAX_BPS) {
+        if (totalBps != MAX_BASIS_POINTS) {
             revert InvalidBasisPointsSum();
         }
 
@@ -102,7 +101,8 @@ contract RewardDistributor is AccessControl {
         for (uint256 i = 0; i < recipients.length; i++) {
             Recipient memory recipient = recipients[i];
 
-            uint256 amount = (balance * recipient.basisPoints) / MAX_BPS;
+            uint256 amount = (balance * recipient.basisPoints) /
+                MAX_BASIS_POINTS;
 
             if (amount > 0) {
                 tokenContract.safeTransfer(recipient.account, amount);
