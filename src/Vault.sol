@@ -24,8 +24,8 @@ abstract contract Vault is
 
     /* ========== CONSTANTS ========== */
 
-    uint256 public constant FEE_PRECISION = 10_000;
-    uint256 public constant MAX_REWARD_FEE = 2_000;
+    uint256 public constant MAX_BASIS_POINTS = 10_000;
+    uint256 public constant MAX_REWARD_FEE_BASIS_POINTS = 2_000;
     uint8 public constant MAX_OFFSET = 23;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -34,11 +34,11 @@ abstract contract Vault is
 
     /* ========== STATE VARIABLES ========== */
 
+    uint256 public lastTotalAssets;
+    uint256 public minFirstDeposit;
     address public immutable TREASURY;
     uint8 public immutable OFFSET;
     uint16 public rewardFee;
-    uint256 public lastTotalAssets;
-    uint256 public minFirstDeposit;
 
     /* ========== EVENTS ========== */
 
@@ -90,7 +90,8 @@ abstract contract Vault is
     ) ERC4626(asset_) ERC20(name_, symbol_) ERC20Permit(name_) {
         if (address(asset_) == address(0)) revert ZeroAddress();
         if (treasury_ == address(0)) revert ZeroAddress();
-        if (rewardFee_ > MAX_REWARD_FEE) revert InvalidFee(rewardFee_);
+        if (rewardFee_ > MAX_REWARD_FEE_BASIS_POINTS)
+            revert InvalidFee(rewardFee_);
         if (offset_ > MAX_OFFSET) revert OffsetTooHigh(offset_);
 
         TREASURY = treasury_;
@@ -201,13 +202,7 @@ abstract contract Vault is
         uint256 assetsToWithdraw,
         address assetReceiver,
         address shareOwner
-    )
-        public
-        virtual
-        override
-        nonReentrant
-        returns (uint256 sharesBurned)
-    {
+    ) public virtual override nonReentrant returns (uint256 sharesBurned) {
         if (assetsToWithdraw == 0) revert ZeroAmount();
         if (assetReceiver == address(0)) revert ZeroAddress();
 
@@ -250,13 +245,7 @@ abstract contract Vault is
         uint256 sharesToRedeem,
         address assetReceiver,
         address shareOwner
-    )
-        public
-        virtual
-        override
-        nonReentrant
-        returns (uint256 assetsWithdrawn)
-    {
+    ) public virtual override nonReentrant returns (uint256 assetsWithdrawn) {
         if (sharesToRedeem == 0) revert ZeroAmount();
         if (assetReceiver == address(0)) revert ZeroAddress();
 
@@ -326,10 +315,11 @@ abstract contract Vault is
 
             uint256 feeAmount = profit.mulDiv(
                 rewardFee,
-                FEE_PRECISION,
-                Math.Rounding.Floor
+                MAX_BASIS_POINTS,
+                Math.Rounding.Ceil
             );
 
+            if (feeAmount > profit) feeAmount = profit;
             if (feeAmount > 0 && feeAmount < currentTotal) {
                 uint256 sharesMinted = feeAmount.mulDiv(
                     supply,
@@ -348,7 +338,7 @@ abstract contract Vault is
     }
 
     function setRewardFee(uint16 newFee) external onlyRole(FEE_MANAGER_ROLE) {
-        if (newFee > MAX_REWARD_FEE) revert InvalidFee(newFee);
+        if (newFee > MAX_REWARD_FEE_BASIS_POINTS) revert InvalidFee(newFee);
 
         _harvestFees();
 
@@ -416,7 +406,13 @@ abstract contract Vault is
         if (currentTotal <= lastTotalAssets) return 0;
 
         uint256 profit = currentTotal - lastTotalAssets;
-        return profit.mulDiv(rewardFee, FEE_PRECISION, Math.Rounding.Floor);
+        uint256 feeAmount = profit.mulDiv(
+            rewardFee,
+            MAX_BASIS_POINTS,
+            Math.Rounding.Ceil
+        );
+        if (feeAmount > profit) feeAmount = profit;
+        return feeAmount;
     }
 
     function getVaultConfig()

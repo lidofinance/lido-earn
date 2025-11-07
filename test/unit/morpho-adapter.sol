@@ -1324,7 +1324,7 @@ contract MorphoAdapterUnitTest is Test {
         );
 
         uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.FEE_PRECISION();
+            vault.MAX_BASIS_POINTS();
 
         vault.harvestFees();
 
@@ -1377,7 +1377,7 @@ contract MorphoAdapterUnitTest is Test {
             usdc.balanceOf(address(morpho)) + profit
         );
 
-        uint256 expectedFeeAmount = (profit * 2000) / vault.FEE_PRECISION();
+        uint256 expectedFeeAmount = (profit * 2000) / vault.MAX_BASIS_POINTS();
 
         vault.harvestFees();
 
@@ -1405,7 +1405,7 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 pendingFees = vault.getPendingFees();
         uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.FEE_PRECISION();
+            vault.MAX_BASIS_POINTS();
 
         assertApproxEqAbs(
             pendingFees,

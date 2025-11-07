@@ -7,7 +7,6 @@ import {Vault} from "src/Vault.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract VaultFeesTest is VaultTestBase {
-
     /* ========== SET REWARD FEE TESTS ========== */
 
     function test_SetRewardFee_Basic() public {
@@ -46,7 +45,9 @@ contract VaultFeesTest is VaultTestBase {
     function test_SetRewardFee_RevertIf_ExceedsMaximum() public {
         uint16 invalidFee = 2001;
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee));
+        vm.expectRevert(
+            abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee)
+        );
         vault.setRewardFee(invalidFee);
     }
 
@@ -146,7 +147,8 @@ contract VaultFeesTest is VaultTestBase {
         asset.mint(address(vault), profit);
 
         uint256 expectedShares = _calculateExpectedFeeShares(profit);
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.FEE_PRECISION();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
+            vault.MAX_BASIS_POINTS();
 
         vm.expectEmit(false, false, false, true);
         emit Vault.FeesHarvested(profit, expectedFeeAmount, expectedShares);
@@ -268,12 +270,17 @@ contract VaultFeesTest is VaultTestBase {
         uint256 secondProfit = 3_000e6;
         asset.mint(address(vault), secondProfit);
 
-        uint256 expectedSecondShares = _calculateExpectedFeeShares(secondProfit);
+        uint256 expectedSecondShares = _calculateExpectedFeeShares(
+            secondProfit
+        );
 
         vault.harvestFees();
         uint256 treasurySharesAfterSecond = vault.balanceOf(treasury);
 
-        assertEq(treasurySharesAfterSecond, expectedFirstShares + expectedSecondShares);
+        assertEq(
+            treasurySharesAfterSecond,
+            expectedFirstShares + expectedSecondShares
+        );
     }
 
     function test_HarvestFees_CalledAutomaticallyOnDeposit() public {
@@ -366,7 +373,8 @@ contract VaultFeesTest is VaultTestBase {
         uint256 profit = 10_000e6;
         asset.mint(address(vault), profit);
 
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.FEE_PRECISION();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
+            vault.MAX_BASIS_POINTS();
 
         vault.harvestFees();
 
@@ -402,7 +410,7 @@ contract VaultFeesTest is VaultTestBase {
         uint256 profit = 10_000e6;
         asset.mint(address(vault), profit);
 
-        uint256 expectedFeeAmount = (profit * 2000) / vault.FEE_PRECISION();
+        uint256 expectedFeeAmount = (profit * 2000) / vault.MAX_BASIS_POINTS();
 
         vault.harvestFees();
 
@@ -420,7 +428,8 @@ contract VaultFeesTest is VaultTestBase {
         asset.mint(address(vault), profit);
 
         uint256 pendingFees = vault.getPendingFees();
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.FEE_PRECISION();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
+            vault.MAX_BASIS_POINTS();
 
         assertApproxEqAbs(pendingFees, expectedFeeAmount, 1);
     }
@@ -454,7 +463,8 @@ contract VaultFeesTest is VaultTestBase {
         asset.mint(address(vault), profit);
 
         uint256 pendingFeesBefore = vault.getPendingFees();
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.FEE_PRECISION();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
+            vault.MAX_BASIS_POINTS();
         assertApproxEqAbs(pendingFeesBefore, expectedFeeAmount, 1);
 
         vault.harvestFees();

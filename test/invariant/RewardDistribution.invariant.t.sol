@@ -161,7 +161,7 @@ contract RewardDistributionInvariantTest is Test {
     function invariant_RewardFeeWithinLimits() public view {
         assertLe(
             vault.rewardFee(),
-            vault.MAX_REWARD_FEE(),
+            vault.MAX_REWARD_FEE_BASIS_POINTS(),
             "INVARIANT VIOLATION: Reward fee exceeds MAX_REWARD_FEE"
         );
     }

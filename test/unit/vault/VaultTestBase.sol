@@ -63,10 +63,12 @@ contract VaultTestBase is Test {
         asset.approve(address(vault), amount);
     }
 
-    function _calculateExpectedFeeShares(uint256 profit) internal view returns (uint256) {
+    function _calculateExpectedFeeShares(
+        uint256 profit
+    ) internal view returns (uint256) {
         uint256 currentTotal = vault.totalAssets();
         uint256 supply = vault.totalSupply();
-        uint256 feeAmount = (profit * REWARD_FEE) / vault.FEE_PRECISION();
+        uint256 feeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
         return (feeAmount * supply) / (currentTotal - feeAmount);
     }
 

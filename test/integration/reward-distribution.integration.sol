@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
@@ -12,6 +13,8 @@ import {MockERC20} from "test/mocks/MockERC20.sol";
 import {RewardDistributor} from "src/RewardDistributor.sol";
 
 contract RewardDistributionIntegrationTest is Test {
+    using Math for uint256;
+
     MorphoAdapter public vault;
     MockMetaMorpho public morpho;
     MockERC20 public usdc;
@@ -25,7 +28,8 @@ contract RewardDistributionIntegrationTest is Test {
     address public charlie = makeAddr("charlie");
 
     uint256 constant INITIAL_BALANCE = 1_000_000e6;
-    uint16 constant REWARD_FEE = 500;
+    uint32 constant MAX_BASIS_POINTS = 10_000;
+    uint16 constant REWARD_FEE_BASIS_POINTS = 500;
     uint8 constant OFFSET = 6;
 
     function setUp() public {
@@ -57,7 +61,7 @@ contract RewardDistributionIntegrationTest is Test {
             address(usdc),
             address(morpho),
             address(rewardDistributor),
-            REWARD_FEE,
+            REWARD_FEE_BASIS_POINTS,
             OFFSET,
             "Morpho USDC Vault",
             "mvUSDC"
@@ -83,7 +87,7 @@ contract RewardDistributionIntegrationTest is Test {
 
     function _addRewardsByBasisPoints(uint256 basisPoints) internal {
         uint256 currentBalance = usdc.balanceOf(address(morpho));
-        uint256 yieldAmount = (currentBalance * basisPoints) / 10000;
+        uint256 yieldAmount = (currentBalance * basisPoints) / MAX_BASIS_POINTS;
         usdc.mint(address(morpho), yieldAmount);
     }
 
@@ -138,7 +142,8 @@ contract RewardDistributionIntegrationTest is Test {
             uint256 treasurySharesBefore = vault.balanceOf(
                 address(rewardDistributor)
             );
-            uint256 rewardsAmount = (vaultBalanceBefore * 10) / 10000;
+            uint256 rewardsAmount = (vaultBalanceBefore * 10) /
+                MAX_BASIS_POINTS;
 
             _addRewardsByAmount(rewardsAmount);
 
@@ -169,7 +174,11 @@ contract RewardDistributionIntegrationTest is Test {
 
             uint256 lastAssets = vault.lastTotalAssets();
             uint256 profit = vaultBalanceBefore - lastAssets;
-            uint256 expectedFeeAmount = (profit * 500) / 10000;
+            uint256 expectedFeeAmount = profit.mulDiv(
+                REWARD_FEE_BASIS_POINTS,
+                MAX_BASIS_POINTS,
+                Math.Rounding.Ceil
+            );
             uint256 expectedTreasuryShares = (expectedFeeAmount *
                 totalSupplyBefore) / (vaultBalanceBefore - expectedFeeAmount);
 
@@ -208,7 +217,8 @@ contract RewardDistributionIntegrationTest is Test {
             uint256 treasurySharesBefore = vault.balanceOf(
                 address(rewardDistributor)
             );
-            uint256 rewardsAmount = (vaultBalanceBefore * 10) / 10000;
+            uint256 rewardsAmount = (vaultBalanceBefore * 10) /
+                MAX_BASIS_POINTS;
 
             _addRewardsByAmount(rewardsAmount);
 
@@ -253,7 +263,11 @@ contract RewardDistributionIntegrationTest is Test {
 
             uint256 lastAssets = vault.lastTotalAssets();
             uint256 profit = vaultBalanceBefore - lastAssets;
-            uint256 expectedFeeAmount = (profit * 500) / 10000;
+            uint256 expectedFeeAmount = profit.mulDiv(
+                REWARD_FEE_BASIS_POINTS,
+                MAX_BASIS_POINTS,
+                Math.Rounding.Ceil
+            );
             uint256 expectedTreasuryShares = (expectedFeeAmount *
                 totalSupplyBefore) / (vaultBalanceBefore - expectedFeeAmount);
 
@@ -347,7 +361,11 @@ contract RewardDistributionIntegrationTest is Test {
             uint256 profit = totalAssetsBefore - lastAssets;
             uint256 expectedAdditionalTreasuryShares = 0;
             if (profit > 0) {
-                uint256 expectedFeeAmount = (profit * 500) / 10000;
+                uint256 expectedFeeAmount = profit.mulDiv(
+                    REWARD_FEE_BASIS_POINTS,
+                    MAX_BASIS_POINTS,
+                    Math.Rounding.Ceil
+                );
                 expectedAdditionalTreasuryShares =
                     (expectedFeeAmount * totalSupplyBefore) /
                     (totalAssetsBefore - expectedFeeAmount);
