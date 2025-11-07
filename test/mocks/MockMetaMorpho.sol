@@ -15,12 +15,10 @@ contract MockMetaMorpho is ERC4626 {
 
     event YieldAccrued(uint256 amount);
 
-    constructor(
-        IERC20 asset_,
-        string memory name_,
-        string memory symbol_,
-        uint8 offset_
-    ) ERC4626(asset_) ERC20(name_, symbol_) {
+    constructor(IERC20 asset_, string memory name_, string memory symbol_, uint8 offset_)
+        ERC4626(asset_)
+        ERC20(name_, symbol_)
+    {
         _offset = offset_;
     }
 
@@ -29,8 +27,7 @@ contract MockMetaMorpho is ERC4626 {
     }
 
     function getSharePrice() external view returns (uint256) {
-        return
-            totalSupply() > 0 ? (totalAssets() * 1e18) / totalSupply() : 1e18;
+        return totalSupply() > 0 ? (totalAssets() * 1e18) / totalSupply() : 1e18;
     }
 
     function maxWithdraw(address owner) public view override returns (uint256) {

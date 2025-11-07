@@ -65,9 +65,7 @@ contract VaultPermitTest is VaultTestBase {
 
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -76,18 +74,11 @@ contract VaultPermitTest is VaultTestBase {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ERC20Permit.ERC2612ExpiredSignature.selector,
-                deadline
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612ExpiredSignature.selector, deadline));
         vault.permit(owner, bob, amount, deadline, v, r, s);
     }
 
@@ -105,9 +96,7 @@ contract VaultPermitTest is VaultTestBase {
 
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -116,19 +105,11 @@ contract VaultPermitTest is VaultTestBase {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPrivateKey, digest);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ERC20Permit.ERC2612InvalidSigner.selector,
-                wrongSigner,
-                owner
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, wrongSigner, owner));
         vault.permit(owner, bob, amount, deadline, v, r, s);
     }
 
@@ -143,9 +124,7 @@ contract VaultPermitTest is VaultTestBase {
 
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -154,9 +133,7 @@ contract VaultPermitTest is VaultTestBase {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
 
@@ -166,9 +143,7 @@ contract VaultPermitTest is VaultTestBase {
         nonce = vault.nonces(owner);
         structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -177,19 +152,11 @@ contract VaultPermitTest is VaultTestBase {
             )
         );
 
-        digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         address recoveredSigner = ecrecover(digest, v, r, s);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ERC20Permit.ERC2612InvalidSigner.selector,
-                recoveredSigner,
-                owner
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, recoveredSigner, owner));
         vault.permit(owner, bob, amount, deadline, v, r, s);
     }
 
@@ -217,9 +184,7 @@ contract VaultPermitTest is VaultTestBase {
 
         bytes32 expectedDomainSeparator = keccak256(
             abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes(vault.name())),
                 keccak256(bytes("1")),
                 block.chainid,

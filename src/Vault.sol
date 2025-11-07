@@ -12,13 +12,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-abstract contract Vault is
-    ERC4626,
-    ERC20Permit,
-    AccessControl,
-    ReentrancyGuard,
-    Pausable
-{
+abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -42,26 +36,13 @@ abstract contract Vault is
 
     /* ========== EVENTS ========== */
 
-    event Deposited(
-        address indexed caller,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
+    event Deposited(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
 
     event Withdrawn(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
-    event FeesHarvested(
-        uint256 profit,
-        uint256 feeAmount,
-        uint256 sharesMinted
-    );
+    event FeesHarvested(uint256 profit, uint256 feeAmount, uint256 sharesMinted);
 
     event RewardFeeUpdated(uint256 oldFee, uint256 newFee);
     event EmergencyWithdrawal(address indexed receiver, uint256 amount);
@@ -89,8 +70,9 @@ abstract contract Vault is
     ) ERC4626(asset_) ERC20(name_, symbol_) ERC20Permit(name_) {
         if (address(asset_) == address(0)) revert ZeroAddress();
         if (treasury_ == address(0)) revert ZeroAddress();
-        if (rewardFee_ > MAX_REWARD_FEE_BASIS_POINTS)
+        if (rewardFee_ > MAX_REWARD_FEE_BASIS_POINTS) {
             revert InvalidFee(rewardFee_);
+        }
         if (offset_ > MAX_OFFSET) revert OffsetTooHigh(offset_);
 
         TREASURY = treasury_;
@@ -106,10 +88,7 @@ abstract contract Vault is
 
     /* ========== ERC4626 OVERRIDES ========== */
 
-    function deposit(
-        uint256 assetsToDeposit,
-        address shareReceiver
-    )
+    function deposit(uint256 assetsToDeposit, address shareReceiver)
         public
         virtual
         override
@@ -129,35 +108,19 @@ abstract contract Vault is
         sharesMinted = previewDeposit(assetsToDeposit);
         if (sharesMinted == 0) revert ZeroAmount();
 
-        SafeERC20.safeTransferFrom(
-            IERC20(asset()),
-            msg.sender,
-            address(this),
-            assetsToDeposit
-        );
+        SafeERC20.safeTransferFrom(IERC20(asset()), msg.sender, address(this), assetsToDeposit);
 
-        uint256 protocolSharesReceived = _depositToProtocol(
-            assetsToDeposit,
-            shareReceiver
-        );
+        uint256 protocolSharesReceived = _depositToProtocol(assetsToDeposit, shareReceiver);
         if (protocolSharesReceived == 0) revert ZeroAmount();
 
         _mint(shareReceiver, sharesMinted);
 
         lastTotalAssets = totalAssets();
 
-        emit Deposited(
-            msg.sender,
-            shareReceiver,
-            assetsToDeposit,
-            sharesMinted
-        );
+        emit Deposited(msg.sender, shareReceiver, assetsToDeposit, sharesMinted);
     }
 
-    function mint(
-        uint256 sharesToMint,
-        address shareReceiver
-    )
+    function mint(uint256 sharesToMint, address shareReceiver)
         public
         virtual
         override
@@ -176,17 +139,9 @@ abstract contract Vault is
             revert FirstDepositTooSmall(MIN_FIRST_DEPOSIT, assetsRequired);
         }
 
-        SafeERC20.safeTransferFrom(
-            IERC20(asset()),
-            msg.sender,
-            address(this),
-            assetsRequired
-        );
+        SafeERC20.safeTransferFrom(IERC20(asset()), msg.sender, address(this), assetsRequired);
 
-        uint256 protocolSharesReceived = _depositToProtocol(
-            assetsRequired,
-            shareReceiver
-        );
+        uint256 protocolSharesReceived = _depositToProtocol(assetsRequired, shareReceiver);
 
         if (protocolSharesReceived == 0) revert ZeroAmount();
 
@@ -196,11 +151,13 @@ abstract contract Vault is
         emit Deposited(msg.sender, shareReceiver, assetsRequired, sharesToMint);
     }
 
-    function withdraw(
-        uint256 assetsToWithdraw,
-        address assetReceiver,
-        address shareOwner
-    ) public virtual override nonReentrant returns (uint256 sharesBurned) {
+    function withdraw(uint256 assetsToWithdraw, address assetReceiver, address shareOwner)
+        public
+        virtual
+        override
+        nonReentrant
+        returns (uint256 sharesBurned)
+    {
         if (assetsToWithdraw == 0) revert ZeroAmount();
         if (assetReceiver == address(0)) revert ZeroAddress();
 
@@ -216,11 +173,7 @@ abstract contract Vault is
             _spendAllowance(shareOwner, msg.sender, sharesBurned);
         }
 
-        uint256 assetsWithdrawn = _withdrawFromProtocol(
-            assetsToWithdraw,
-            assetReceiver,
-            shareOwner
-        );
+        uint256 assetsWithdrawn = _withdrawFromProtocol(assetsToWithdraw, assetReceiver, shareOwner);
 
         if (assetsWithdrawn < assetsToWithdraw) {
             revert InsufficientLiquidity(assetsToWithdraw, assetsWithdrawn);
@@ -230,20 +183,16 @@ abstract contract Vault is
 
         lastTotalAssets = totalAssets();
 
-        emit Withdrawn(
-            msg.sender,
-            assetReceiver,
-            shareOwner,
-            assetsWithdrawn,
-            sharesBurned
-        );
+        emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsWithdrawn, sharesBurned);
     }
 
-    function redeem(
-        uint256 sharesToRedeem,
-        address assetReceiver,
-        address shareOwner
-    ) public virtual override nonReentrant returns (uint256 assetsWithdrawn) {
+    function redeem(uint256 sharesToRedeem, address assetReceiver, address shareOwner)
+        public
+        virtual
+        override
+        nonReentrant
+        returns (uint256 assetsWithdrawn)
+    {
         if (sharesToRedeem == 0) revert ZeroAmount();
         if (assetReceiver == address(0)) revert ZeroAddress();
 
@@ -259,11 +208,7 @@ abstract contract Vault is
 
         uint256 assetsToWithdraw = convertToAssets(sharesToRedeem);
 
-        assetsWithdrawn = _withdrawFromProtocol(
-            assetsToWithdraw,
-            assetReceiver,
-            shareOwner
-        );
+        assetsWithdrawn = _withdrawFromProtocol(assetsToWithdraw, assetReceiver, shareOwner);
 
         if (assetsWithdrawn == 0) revert ZeroAmount();
 
@@ -271,27 +216,20 @@ abstract contract Vault is
 
         lastTotalAssets = totalAssets();
 
-        emit Withdrawn(
-            msg.sender,
-            assetReceiver,
-            shareOwner,
-            assetsWithdrawn,
-            sharesToRedeem
-        );
+        emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsWithdrawn, sharesToRedeem);
     }
 
     /* ========== INTERNAL PROTOCOL FUNCTIONS ========== */
 
-    function _depositToProtocol(
-        uint256 assets,
-        address receiver
-    ) internal virtual returns (uint256 protocolSharesReceived);
+    function _depositToProtocol(uint256 assets, address receiver)
+        internal
+        virtual
+        returns (uint256 protocolSharesReceived);
 
-    function _withdrawFromProtocol(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) internal virtual returns (uint256 actualAssets);
+    function _withdrawFromProtocol(uint256 assets, address receiver, address owner)
+        internal
+        virtual
+        returns (uint256 actualAssets);
 
     /* ========== FEE MANAGEMENT ========== */
 
@@ -311,19 +249,11 @@ abstract contract Vault is
         if (currentTotal > lastTotalAssets) {
             uint256 profit = currentTotal - lastTotalAssets;
 
-            uint256 feeAmount = profit.mulDiv(
-                rewardFee,
-                MAX_BASIS_POINTS,
-                Math.Rounding.Ceil
-            );
+            uint256 feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
 
             if (feeAmount > profit) feeAmount = profit;
             if (feeAmount > 0 && feeAmount < currentTotal) {
-                uint256 sharesMinted = feeAmount.mulDiv(
-                    supply,
-                    currentTotal - feeAmount,
-                    Math.Rounding.Floor
-                );
+                uint256 sharesMinted = feeAmount.mulDiv(supply, currentTotal - feeAmount, Math.Rounding.Floor);
 
                 if (sharesMinted > 0) {
                     _mint(TREASURY, sharesMinted);
@@ -364,9 +294,7 @@ abstract contract Vault is
 
     /* ========== EMERGENCY FUNCTIONS ========== */
 
-    function emergencyWithdraw(
-        address receiver
-    ) external virtual onlyRole(EMERGENCY_ROLE) returns (uint256 amount) {
+    function emergencyWithdraw(address receiver) external virtual onlyRole(EMERGENCY_ROLE) returns (uint256 amount) {
         if (receiver == address(0)) revert ZeroAddress();
         _pause();
 
@@ -376,19 +304,11 @@ abstract contract Vault is
         emit EmergencyWithdrawal(receiver, amount);
     }
 
-    function _emergencyWithdrawFromProtocol(
-        address receiver
-    ) internal virtual returns (uint256);
+    function _emergencyWithdrawFromProtocol(address receiver) internal virtual returns (uint256);
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function decimals()
-        public
-        view
-        virtual
-        override(ERC20, ERC4626)
-        returns (uint8)
-    {
+    function decimals() public view virtual override(ERC20, ERC4626) returns (uint8) {
         return IERC20Metadata(asset()).decimals();
     }
 
@@ -397,11 +317,7 @@ abstract contract Vault is
         if (currentTotal <= lastTotalAssets) return 0;
 
         uint256 profit = currentTotal - lastTotalAssets;
-        uint256 feeAmount = profit.mulDiv(
-            rewardFee,
-            MAX_BASIS_POINTS,
-            Math.Rounding.Ceil
-        );
+        uint256 feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
         if (feeAmount > profit) feeAmount = profit;
         return feeAmount;
     }

@@ -80,13 +80,7 @@ contract VaultWithdrawTest is VaultTestBase {
         uint256 shares = vault.balanceOf(alice);
         uint256 sharesRequested = vault.convertToShares(20_000e6);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Vault.InsufficientShares.selector,
-                sharesRequested,
-                shares
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientShares.selector, sharesRequested, shares));
         vm.prank(alice);
         vault.withdraw(20_000e6, alice, alice);
     }
@@ -128,10 +122,7 @@ contract VaultWithdrawTest is VaultTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientAllowance.selector,
-                bob,
-                requiredShares - 1,
-                requiredShares
+                IERC20Errors.ERC20InsufficientAllowance.selector, bob, requiredShares - 1, requiredShares
             )
         );
         vm.prank(bob);
@@ -146,12 +137,7 @@ contract VaultWithdrawTest is VaultTestBase {
         uint256 requiredShares = vault.previewWithdraw(withdrawAmount);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientAllowance.selector,
-                bob,
-                0,
-                requiredShares
-            )
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 0, requiredShares)
         );
         vm.prank(bob);
         vault.withdraw(withdrawAmount, bob, alice);
@@ -300,12 +286,7 @@ contract VaultWithdrawTest is VaultTestBase {
         uint256 sharesToRedeem = shares / 10;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientAllowance.selector,
-                bob,
-                0,
-                sharesToRedeem
-            )
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 0, sharesToRedeem)
         );
         vm.prank(bob);
         vault.redeem(sharesToRedeem, bob, alice);
@@ -351,13 +332,7 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         uint256 shares = vault.deposit(10_000e6, alice);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Vault.InsufficientShares.selector,
-                shares + 1,
-                shares
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientShares.selector, shares + 1, shares));
 
         vm.prank(alice);
         vault.redeem(shares + 1, alice, alice);
@@ -397,12 +372,12 @@ contract VaultWithdrawTest is VaultTestBase {
     }
 
     function test_MultipleDepositsWithdraws_MaintainsAccounting() public {
-        for (uint i = 0; i < 5; i++) {
+        for (uint256 i = 0; i < 5; i++) {
             vm.prank(alice);
             vault.deposit(10_000e6, alice);
         }
 
-        for (uint i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             vm.prank(alice);
             vault.withdraw(10_000e6, alice, alice);
         }

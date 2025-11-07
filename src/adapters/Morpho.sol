@@ -15,17 +15,9 @@ contract MorphoAdapter is Vault {
     IMetaMorpho public immutable MORPHO_VAULT;
     IERC20 public immutable ASSET;
 
-    event MorphoDeposit(
-        uint256 assets,
-        uint256 morphoSharesMinted,
-        uint256 morphoSharesBalance
-    );
+    event MorphoDeposit(uint256 assets, uint256 morphoSharesMinted, uint256 morphoSharesBalance);
 
-    event MorphoWithdrawal(
-        uint256 assets,
-        uint256 morphoSharesBurned,
-        uint256 morphoSharesBalance
-    );
+    event MorphoWithdrawal(uint256 assets, uint256 morphoSharesBurned, uint256 morphoSharesBalance);
 
     error MorphoVaultZeroAddress();
     error MorphoDepositFailed();
@@ -54,54 +46,37 @@ contract MorphoAdapter is Vault {
         return MORPHO_VAULT.convertToAssets(morphoShares);
     }
 
-    function _depositToProtocol(
-        uint256 assets,
-        address /* receiver */
-    ) internal override returns (uint256 shares) {
+    function _depositToProtocol(uint256 assets, address /* receiver */ ) internal override returns (uint256 shares) {
         shares = MORPHO_VAULT.deposit(assets, address(this));
 
         if (shares == 0) {
             revert MorphoDepositFailed();
         }
 
-        emit MorphoDeposit(
-            assets,
-            shares,
-            MORPHO_VAULT.balanceOf(address(this))
-        );
+        emit MorphoDeposit(assets, shares, MORPHO_VAULT.balanceOf(address(this)));
 
         return shares;
     }
 
-    function _withdrawFromProtocol(
-        uint256 assets,
-        address receiver,
-        address /* owner */
-    ) internal override returns (uint256) {
+    function _withdrawFromProtocol(uint256 assets, address receiver, address /* owner */ )
+        internal
+        override
+        returns (uint256)
+    {
         uint256 availableAssets = MORPHO_VAULT.maxWithdraw(address(this));
 
         if (assets > availableAssets) {
             revert Vault.InsufficientLiquidity(assets, availableAssets);
         }
 
-        uint256 morphoSharesBurned = MORPHO_VAULT.withdraw(
-            assets,
-            receiver,
-            address(this)
-        );
+        uint256 morphoSharesBurned = MORPHO_VAULT.withdraw(assets, receiver, address(this));
 
-        emit MorphoWithdrawal(
-            assets,
-            morphoSharesBurned,
-            MORPHO_VAULT.balanceOf(address(this))
-        );
+        emit MorphoWithdrawal(assets, morphoSharesBurned, MORPHO_VAULT.balanceOf(address(this)));
 
         return assets;
     }
 
-    function _emergencyWithdrawFromProtocol(
-        address receiver
-    ) internal override returns (uint256 assets) {
+    function _emergencyWithdrawFromProtocol(address receiver) internal override returns (uint256 assets) {
         uint256 morphoShares = MORPHO_VAULT.balanceOf(address(this));
 
         if (morphoShares == 0) return 0;
@@ -110,11 +85,7 @@ contract MorphoAdapter is Vault {
     }
 
     function maxWithdraw(address owner) public view override returns (uint256) {
-        return
-            Math.min(
-                super.maxWithdraw(owner),
-                MORPHO_VAULT.maxWithdraw(address(this))
-            );
+        return Math.min(super.maxWithdraw(owner), MORPHO_VAULT.maxWithdraw(address(this)));
     }
 
     function refreshMorphoApproval() external onlyRole(DEFAULT_ADMIN_ROLE) {

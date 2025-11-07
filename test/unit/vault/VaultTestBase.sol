@@ -20,32 +20,16 @@ contract VaultTestBase is Test {
     uint16 constant REWARD_FEE = 500;
     uint8 constant OFFSET = 6;
 
-    event Deposited(
-        address indexed caller,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
+    event Deposited(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
 
     event Withdrawn(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     function setUp() public virtual {
         asset = new MockERC20("USD Coin", "USDC", 6);
 
-        vault = new MockVault(
-            address(asset),
-            treasury,
-            REWARD_FEE,
-            OFFSET,
-            "Mock Vault",
-            "mvUSDC"
-        );
+        vault = new MockVault(address(asset), treasury, REWARD_FEE, OFFSET, "Mock Vault", "mvUSDC");
 
         asset.mint(alice, INITIAL_BALANCE);
         asset.mint(bob, INITIAL_BALANCE);
@@ -63,9 +47,7 @@ contract VaultTestBase is Test {
         asset.approve(address(vault), amount);
     }
 
-    function _calculateExpectedFeeShares(
-        uint256 profit
-    ) internal view returns (uint256) {
+    function _calculateExpectedFeeShares(uint256 profit) internal view returns (uint256) {
         uint256 currentTotal = vault.totalAssets();
         uint256 supply = vault.totalSupply();
         uint256 feeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
@@ -82,9 +64,7 @@ contract VaultTestBase is Test {
     ) internal {
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 spender,
                 amount,
@@ -93,9 +73,7 @@ contract VaultTestBase is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
         vault.permit(owner, spender, amount, deadline, v, r, s);

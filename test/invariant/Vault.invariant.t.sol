@@ -20,7 +20,6 @@ pragma solidity 0.8.30;
  *    - invariant_VaultHasAssetsWhenHasShares()
  *    - If totalSupply > 0, then totalAssets > 0 (no orphan shares)
  */
-
 import "forge-std/Test.sol";
 import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
@@ -47,12 +46,7 @@ contract VaultInvariantTest is Test {
     function setUp() public {
         usdc = new MockERC20("USD Coin", "USDC", 6);
 
-        morpho = new MockMetaMorpho(
-            IERC20(address(usdc)),
-            "Mock Morpho USDC",
-            "mUSDC",
-            OFFSET
-        );
+        morpho = new MockMetaMorpho(IERC20(address(usdc)), "Mock Morpho USDC", "mUSDC", OFFSET);
 
         address[] memory recipients = new address[](2);
         recipients[0] = recipient1;
@@ -62,11 +56,7 @@ contract VaultInvariantTest is Test {
         basisPoints[0] = 500;
         basisPoints[1] = 9500;
 
-        rewardDistributor = new RewardDistributor(
-            manager,
-            recipients,
-            basisPoints
-        );
+        rewardDistributor = new RewardDistributor(manager, recipients, basisPoints);
 
         vault = new MorphoAdapter(
             address(usdc),
@@ -110,12 +100,7 @@ contract VaultInvariantTest is Test {
 
         uint256 assetsBack = vault.convertToAssets(shares);
 
-        assertApproxEqRel(
-            assetsBack,
-            testAmount,
-            0.0001e18,
-            "INVARIANT VIOLATION: Round-trip conversion lost >0.01%"
-        );
+        assertApproxEqRel(assetsBack, testAmount, 0.0001e18, "INVARIANT VIOLATION: Round-trip conversion lost >0.01%");
     }
 
     function invariant_TotalSupplyEqualsSumOfBalances() public view {
@@ -127,11 +112,7 @@ contract VaultInvariantTest is Test {
         sumOfBalances += vault.balanceOf(handler.actors(1));
         sumOfBalances += vault.balanceOf(handler.actors(2));
 
-        assertEq(
-            totalSupply,
-            sumOfBalances,
-            "INVARIANT VIOLATION: Total supply != sum of balances"
-        );
+        assertEq(totalSupply, sumOfBalances, "INVARIANT VIOLATION: Total supply != sum of balances");
     }
 
     function invariant_VaultHasAssetsWhenHasShares() public view {
@@ -139,11 +120,7 @@ contract VaultInvariantTest is Test {
         uint256 totalSupply = vault.totalSupply();
 
         if (totalSupply > 0) {
-            assertGt(
-                totalAssets,
-                0,
-                "INVARIANT VIOLATION: Vault has shares but zero assets"
-            );
+            assertGt(totalAssets, 0, "INVARIANT VIOLATION: Vault has shares but zero assets");
         }
     }
 

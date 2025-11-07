@@ -43,12 +43,7 @@ contract DemoDeploy is Script {
 
         // 2. Deploy Mock Morpho Vault
         console.log("2. Deploying MockMetaMorpho...");
-        morphoVault = new MockMetaMorpho(
-            IERC20(address(token)),
-            "Mock Morpho USDC Vault",
-            "mmUSDC",
-            DECIMALS_OFFSET
-        );
+        morphoVault = new MockMetaMorpho(IERC20(address(token)), "Mock Morpho USDC Vault", "mmUSDC", DECIMALS_OFFSET);
         console.log("   MockMetaMorpho deployed at:", address(morphoVault));
         console.log("");
 
@@ -62,15 +57,8 @@ contract DemoDeploy is Script {
         basisPoints[0] = RECIPIENT_1_BPS;
         basisPoints[1] = RECIPIENT_2_BPS;
 
-        rewardDistributor = new RewardDistributor(
-            ADMIN,
-            recipients,
-            basisPoints
-        );
-        console.log(
-            "   RewardDistributor deployed at:",
-            address(rewardDistributor)
-        );
+        rewardDistributor = new RewardDistributor(ADMIN, recipients, basisPoints);
+        console.log("   RewardDistributor deployed at:", address(rewardDistributor));
         console.log("   Recipient 1 (5%):", RECIPIENT_1);
         console.log("   Recipient 2 (95%):", RECIPIENT_2);
         console.log("");

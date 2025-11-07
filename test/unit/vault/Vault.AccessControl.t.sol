@@ -56,9 +56,7 @@ contract VaultAccessControlTest is VaultTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                alice,
-                vault.getRoleAdmin(pauserRole)
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.getRoleAdmin(pauserRole)
             )
         );
         vm.prank(alice);
@@ -73,9 +71,7 @@ contract VaultAccessControlTest is VaultTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                alice,
-                vault.getRoleAdmin(pauserRole)
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.getRoleAdmin(pauserRole)
             )
         );
         vm.prank(alice);

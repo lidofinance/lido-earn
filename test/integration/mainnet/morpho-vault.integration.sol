@@ -22,21 +22,10 @@ contract MorphoConnectorIntegrationTest is Test {
     function setUp() public {
         string memory rpcUrl = vm.envOr("MAINNET_RPC_URL", string(""));
 
-        vm.skip(
-            bytes(rpcUrl).length == 0,
-            "MAINNET_RPC_URL not set, skipping Morpho mainnet tests"
-        );
+        vm.skip(bytes(rpcUrl).length == 0, "MAINNET_RPC_URL not set, skipping Morpho mainnet tests");
         vm.createSelectFork(rpcUrl);
 
-        vault = new MorphoAdapter(
-            USDC,
-            STEAKHOUSE_USDC_VAULT,
-            treasury,
-            500,
-            10,
-            "MorphoVault",
-            "MORPHO"
-        );
+        vault = new MorphoAdapter(USDC, STEAKHOUSE_USDC_VAULT, treasury, 500, 10, "MorphoVault", "MORPHO");
 
         morphoVault = IMetaMorpho(STEAKHOUSE_USDC_VAULT);
 
@@ -64,10 +53,6 @@ contract MorphoConnectorIntegrationTest is Test {
 
         assertApproxEqAbs(assetsFromShares, amount, 2);
         assertApproxEqAbs(vault.totalAssets(), amount, 2);
-        assertApproxEqAbs(
-            morphoVault.convertToAssets(morphoVault.balanceOf(address(vault))),
-            amount,
-            2
-        );
+        assertApproxEqAbs(morphoVault.convertToAssets(morphoVault.balanceOf(address(vault))), amount, 2);
     }
 }

@@ -39,7 +39,6 @@ pragma solidity 0.8.30;
  *    - Ensures reward fee is always within protocol limits
  *    - Validates fee configuration integrity
  */
-
 import "forge-std/Test.sol";
 import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
@@ -66,12 +65,7 @@ contract RewardDistributionInvariantTest is Test {
     function setUp() public {
         usdc = new MockERC20("USD Coin", "USDC", 6);
 
-        morpho = new MockMetaMorpho(
-            IERC20(address(usdc)),
-            "Mock Morpho USDC",
-            "mUSDC",
-            OFFSET
-        );
+        morpho = new MockMetaMorpho(IERC20(address(usdc)), "Mock Morpho USDC", "mUSDC", OFFSET);
 
         address[] memory recipients = new address[](2);
         recipients[0] = recipient1;
@@ -81,11 +75,7 @@ contract RewardDistributionInvariantTest is Test {
         basisPoints[0] = 500;
         basisPoints[1] = 9500;
 
-        rewardDistributor = new RewardDistributor(
-            manager,
-            recipients,
-            basisPoints
-        );
+        rewardDistributor = new RewardDistributor(manager, recipients, basisPoints);
 
         vault = new MorphoAdapter(
             address(usdc),
@@ -102,13 +92,7 @@ contract RewardDistributionInvariantTest is Test {
         actors[1] = makeAddr("actor2");
         actors[2] = makeAddr("actor3");
 
-        handler = new RewardDistributionHandler(
-            vault,
-            usdc,
-            morpho,
-            rewardDistributor,
-            actors
-        );
+        handler = new RewardDistributionHandler(vault, usdc, morpho, rewardDistributor, actors);
 
         targetContract(address(handler));
 
@@ -126,24 +110,14 @@ contract RewardDistributionInvariantTest is Test {
     }
 
     function invariant_TreasurySharesMintedOnlyWithProfit() public view {
-        assertEq(
-            handler.treasuryMintsWithoutProfit(),
-            0,
-            "INVARIANT VIOLATION: Treasury shares minted without profit"
-        );
+        assertEq(handler.treasuryMintsWithoutProfit(), 0, "INVARIANT VIOLATION: Treasury shares minted without profit");
     }
 
     function invariant_TreasuryReceivesSharesWhenProfit() public view {
         if (handler.treasuryMintsCount() > 0) {
-            uint256 totalOperations = handler.depositsCount() +
-                handler.withdrawsCount() +
-                handler.mintsCount() +
-                handler.redeemsCount();
-            assertGt(
-                totalOperations,
-                0,
-                "INVARIANT VIOLATION: Treasury has shares but no operations recorded"
-            );
+            uint256 totalOperations =
+                handler.depositsCount() + handler.withdrawsCount() + handler.mintsCount() + handler.redeemsCount();
+            assertGt(totalOperations, 0, "INVARIANT VIOLATION: Treasury has shares but no operations recorded");
         }
     }
 
@@ -151,11 +125,7 @@ contract RewardDistributionInvariantTest is Test {
         uint256 currentAssets = vault.totalAssets();
         uint256 lastAssets = vault.lastTotalAssets();
 
-        assertLe(
-            lastAssets,
-            currentAssets,
-            "INVARIANT VIOLATION: lastTotalAssets > totalAssets"
-        );
+        assertLe(lastAssets, currentAssets, "INVARIANT VIOLATION: lastTotalAssets > totalAssets");
     }
 
     function invariant_RewardFeeWithinLimits() public view {
@@ -173,20 +143,11 @@ contract RewardDistributionInvariantTest is Test {
         console.log("Mints:", handler.mintsCount());
         console.log("Redeems:", handler.redeemsCount());
         console.log("Treasury mints:", handler.treasuryMintsCount());
-        console.log(
-            "Treasury mints WITHOUT profit:",
-            handler.treasuryMintsWithoutProfit()
-        );
+        console.log("Treasury mints WITHOUT profit:", handler.treasuryMintsWithoutProfit());
         console.log("\n--- Cumulative Stats ---");
         console.log("Total profit harvested:", handler.totalProfitHarvested());
-        console.log(
-            "Expected treasury shares:",
-            handler.totalExpectedTreasuryShares()
-        );
-        console.log(
-            "Actual treasury shares:",
-            vault.balanceOf(address(rewardDistributor))
-        );
+        console.log("Expected treasury shares:", handler.totalExpectedTreasuryShares());
+        console.log("Actual treasury shares:", vault.balanceOf(address(rewardDistributor)));
         console.log("==============================\n");
     }
 }

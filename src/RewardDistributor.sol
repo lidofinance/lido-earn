@@ -20,11 +20,7 @@ contract RewardDistributor is AccessControl {
     Recipient[] public recipients;
 
     event RewardsDistributed(address indexed token, uint256 totalAmount);
-    event RecipientPaid(
-        address indexed recipient,
-        address indexed token,
-        uint256 amount
-    );
+    event RecipientPaid(address indexed recipient, address indexed token, uint256 amount);
     event VaultRedeemed(address indexed vault, uint256 shares, uint256 assets);
 
     error InvalidRecipientsLength();
@@ -34,11 +30,7 @@ contract RewardDistributor is AccessControl {
     error NoBalance();
     error NoShares();
 
-    constructor(
-        address _manager,
-        address[] memory _recipients,
-        uint256[] memory _basisPoints
-    ) {
+    constructor(address _manager, address[] memory _recipients, uint256[] memory _basisPoints) {
         if (_recipients.length != _basisPoints.length) {
             revert InvalidRecipientsLength();
         }
@@ -58,12 +50,7 @@ contract RewardDistributor is AccessControl {
                 revert ZeroBasisPoints();
             }
 
-            recipients.push(
-                Recipient({
-                    account: _recipients[i],
-                    basisPoints: _basisPoints[i]
-                })
-            );
+            recipients.push(Recipient({account: _recipients[i], basisPoints: _basisPoints[i]}));
 
             totalBps += _basisPoints[i];
         }
@@ -75,9 +62,7 @@ contract RewardDistributor is AccessControl {
         _grantRole(MANAGER_ROLE, _manager);
     }
 
-    function redeem(
-        address vault
-    ) external onlyRole(MANAGER_ROLE) returns (uint256 assets) {
+    function redeem(address vault) external onlyRole(MANAGER_ROLE) returns (uint256 assets) {
         IERC4626 vaultContract = IERC4626(vault);
         uint256 shares = vaultContract.balanceOf(address(this));
 
@@ -101,8 +86,7 @@ contract RewardDistributor is AccessControl {
         for (uint256 i = 0; i < recipients.length; i++) {
             Recipient memory recipient = recipients[i];
 
-            uint256 amount = (balance * recipient.basisPoints) /
-                MAX_BASIS_POINTS;
+            uint256 amount = (balance * recipient.basisPoints) / MAX_BASIS_POINTS;
 
             if (amount > 0) {
                 tokenContract.safeTransfer(recipient.account, amount);
@@ -118,9 +102,7 @@ contract RewardDistributor is AccessControl {
         return recipients.length;
     }
 
-    function getRecipient(
-        uint256 index
-    ) external view returns (address account, uint256 basisPoints) {
+    function getRecipient(uint256 index) external view returns (address account, uint256 basisPoints) {
         Recipient memory recipient = recipients[index];
         return (recipient.account, recipient.basisPoints);
     }

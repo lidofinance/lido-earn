@@ -21,25 +21,20 @@ contract MockVault is Vault {
         return IERC20(asset()).balanceOf(address(this));
     }
 
-    function _depositToProtocol(
-        uint256 assets,
-        address /* receiver */
-    ) internal pure override returns (uint256) {
+    function _depositToProtocol(uint256 assets, address /* receiver */ ) internal pure override returns (uint256) {
         return assets;
     }
 
-    function _withdrawFromProtocol(
-        uint256 assets,
-        address receiver,
-        address /* owner */
-    ) internal override returns (uint256) {
+    function _withdrawFromProtocol(uint256 assets, address receiver, address /* owner */ )
+        internal
+        override
+        returns (uint256)
+    {
         IERC20(asset()).safeTransfer(receiver, assets);
         return assets;
     }
 
-    function _emergencyWithdrawFromProtocol(
-        address receiver
-    ) internal override returns (uint256) {
+    function _emergencyWithdrawFromProtocol(address receiver) internal override returns (uint256) {
         uint256 balance = IERC20(asset()).balanceOf(address(this));
         if (balance > 0) {
             IERC20(asset()).safeTransfer(receiver, balance);

@@ -45,9 +45,7 @@ contract VaultFeesTest is VaultTestBase {
     function test_SetRewardFee_RevertIf_ExceedsMaximum() public {
         uint16 invalidFee = 2001;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee));
         vault.setRewardFee(invalidFee);
     }
 
@@ -56,9 +54,7 @@ contract VaultFeesTest is VaultTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                alice,
-                vault.FEE_MANAGER_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.FEE_MANAGER_ROLE()
             )
         );
         vm.prank(alice);
@@ -147,8 +143,7 @@ contract VaultFeesTest is VaultTestBase {
         asset.mint(address(vault), profit);
 
         uint256 expectedShares = _calculateExpectedFeeShares(profit);
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.MAX_BASIS_POINTS();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
 
         vm.expectEmit(false, false, false, true);
         emit Vault.FeesHarvested(profit, expectedFeeAmount, expectedShares);
@@ -173,11 +168,8 @@ contract VaultFeesTest is VaultTestBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool foundFeesHarvestedEvent = false;
 
-        for (uint i = 0; i < logs.length; i++) {
-            if (
-                logs[i].topics[0] ==
-                keccak256("FeesHarvested(uint256,uint256,uint256)")
-            ) {
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("FeesHarvested(uint256,uint256,uint256)")) {
                 foundFeesHarvestedEvent = true;
                 break;
             }
@@ -270,17 +262,12 @@ contract VaultFeesTest is VaultTestBase {
         uint256 secondProfit = 3_000e6;
         asset.mint(address(vault), secondProfit);
 
-        uint256 expectedSecondShares = _calculateExpectedFeeShares(
-            secondProfit
-        );
+        uint256 expectedSecondShares = _calculateExpectedFeeShares(secondProfit);
 
         vault.harvestFees();
         uint256 treasurySharesAfterSecond = vault.balanceOf(treasury);
 
-        assertEq(
-            treasurySharesAfterSecond,
-            expectedFirstShares + expectedSecondShares
-        );
+        assertEq(treasurySharesAfterSecond, expectedFirstShares + expectedSecondShares);
     }
 
     function test_HarvestFees_CalledAutomaticallyOnDeposit() public {
@@ -373,8 +360,7 @@ contract VaultFeesTest is VaultTestBase {
         uint256 profit = 10_000e6;
         asset.mint(address(vault), profit);
 
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.MAX_BASIS_POINTS();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
 
         vault.harvestFees();
 
@@ -428,8 +414,7 @@ contract VaultFeesTest is VaultTestBase {
         asset.mint(address(vault), profit);
 
         uint256 pendingFees = vault.getPendingFees();
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.MAX_BASIS_POINTS();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
 
         assertApproxEqAbs(pendingFees, expectedFeeAmount, 1);
     }
@@ -463,8 +448,7 @@ contract VaultFeesTest is VaultTestBase {
         asset.mint(address(vault), profit);
 
         uint256 pendingFeesBefore = vault.getPendingFees();
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.MAX_BASIS_POINTS();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
         assertApproxEqAbs(pendingFeesBefore, expectedFeeAmount, 1);
 
         vault.harvestFees();

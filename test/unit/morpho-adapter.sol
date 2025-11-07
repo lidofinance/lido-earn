@@ -24,38 +24,18 @@ contract MorphoAdapterUnitTest is Test {
     uint16 constant REWARD_FEE = 500;
     uint8 constant OFFSET = 6;
 
-    event Deposited(
-        address indexed caller,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
+    event Deposited(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
     event Withdrawn(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     function setUp() public {
         usdc = new MockERC20("USD Coin", "USDC", 6);
 
-        morpho = new MockMetaMorpho(
-            IERC20(address(usdc)),
-            "Mock Morpho USDC",
-            "mUSDC",
-            OFFSET
-        );
+        morpho = new MockMetaMorpho(IERC20(address(usdc)), "Mock Morpho USDC", "mUSDC", OFFSET);
 
         vault = new MorphoAdapter(
-            address(usdc),
-            address(morpho),
-            treasury,
-            REWARD_FEE,
-            OFFSET,
-            "Morpho USDC Vault",
-            "mvUSDC"
+            address(usdc), address(morpho), treasury, REWARD_FEE, OFFSET, "Morpho USDC Vault", "mvUSDC"
         );
 
         usdc.mint(alice, INITIAL_BALANCE);
@@ -104,12 +84,7 @@ contract MorphoAdapterUnitTest is Test {
         assertEq(shares, expectedShares, "Should receive exact shares");
         assertEq(vault.balanceOf(alice), shares, "Alice should have shares");
         assertEq(vault.totalSupply(), shares, "Total supply should match");
-        assertApproxEqAbs(
-            vault.totalAssets(),
-            depositAmount,
-            1,
-            "Total assets should match deposit"
-        );
+        assertApproxEqAbs(vault.totalAssets(), depositAmount, 1, "Total assets should match deposit");
     }
 
     function test_Deposit_EmitsEvent() public {
@@ -133,11 +108,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 expectedAliceShares = 50_000e6 * 10 ** vault.OFFSET();
         uint256 expectedBobShares = 30_000e6 * 10 ** vault.OFFSET();
 
-        assertEq(
-            aliceShares,
-            expectedAliceShares,
-            "Alice should have exact shares"
-        );
+        assertEq(aliceShares, expectedAliceShares, "Alice should have exact shares");
         assertEq(bobShares, expectedBobShares, "Bob should have exact shares");
         assertEq(vault.totalSupply(), aliceShares + bobShares);
         assertApproxEqAbs(vault.totalAssets(), 80_000e6, 2);
@@ -147,11 +118,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 depositAmount = 10_000e6;
 
         uint256 morphoBalanceBefore = morpho.balanceOf(address(vault));
-        assertEq(
-            morphoBalanceBefore,
-            0,
-            "Should start with zero Morpho shares"
-        );
+        assertEq(morphoBalanceBefore, 0, "Should start with zero Morpho shares");
 
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
@@ -160,11 +127,7 @@ contract MorphoAdapterUnitTest is Test {
         // MockMetaMorpho теперь использует offset, первый депозит: depositAmount * 10^OFFSET
         uint256 expectedMorphoShares = depositAmount * 10 ** OFFSET;
 
-        assertEq(
-            morphoBalanceAfter,
-            expectedMorphoShares,
-            "Morpho shares should include offset multiplication"
-        );
+        assertEq(morphoBalanceAfter, expectedMorphoShares, "Morpho shares should include offset multiplication");
     }
 
     function test_Deposit_RevertIf_ZeroAmount() public {
@@ -188,13 +151,7 @@ contract MorphoAdapterUnitTest is Test {
     }
 
     function test_FirstDeposit_RevertIf_TooSmall() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Vault.FirstDepositTooSmall.selector,
-                1000,
-                999
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.FirstDepositTooSmall.selector, 1000, 999));
 
         vm.prank(alice);
         vault.deposit(999, alice);
@@ -221,11 +178,7 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(bob);
         uint256 shares = vault.deposit(smallDeposit, bob);
 
-        assertEq(
-            shares,
-            expectedShares,
-            "Should receive calculated shares for small deposit"
-        );
+        assertEq(shares, expectedShares, "Should receive calculated shares for small deposit");
     }
 
     function test_Withdraw_Basic() public {
@@ -242,12 +195,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 aliceBalanceAfter = usdc.balanceOf(alice);
 
         assertEq(shares, expectedShares, "Should burn exact calculated shares");
-        assertApproxEqAbs(
-            aliceBalanceAfter - aliceBalanceBefore,
-            withdrawAmount,
-            2,
-            "Should receive withdrawn amount"
-        );
+        assertApproxEqAbs(aliceBalanceAfter - aliceBalanceBefore, withdrawAmount, 2, "Should receive withdrawn amount");
     }
 
     function test_Withdraw_DoesNotBurnAllShares() public {
@@ -263,17 +211,8 @@ contract MorphoAdapterUnitTest is Test {
         uint256 remainingShares = vault.balanceOf(alice);
         uint256 expectedRemainingShares = initialShares - sharesBurned;
 
-        assertEq(
-            remainingShares,
-            expectedRemainingShares,
-            "Should have exact remaining shares"
-        );
-        assertApproxEqRel(
-            remainingShares,
-            (initialShares * 9) / 10,
-            2,
-            "Should burn ~10% of shares, not all"
-        );
+        assertEq(remainingShares, expectedRemainingShares, "Should have exact remaining shares");
+        assertApproxEqRel(remainingShares, (initialShares * 9) / 10, 2, "Should burn ~10% of shares, not all");
     }
 
     function test_Withdraw_EmitsEvent() public {
@@ -296,13 +235,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 shares = vault.balanceOf(alice);
         uint256 sharesRequested = vault.convertToShares(20_000e6);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Vault.InsufficientShares.selector,
-                sharesRequested,
-                shares
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientShares.selector, sharesRequested, shares));
         vm.prank(alice);
         vault.withdraw(20_000e6, alice, alice);
     }
@@ -313,13 +246,7 @@ contract MorphoAdapterUnitTest is Test {
 
         morpho.setLiquidityCap(5_000e6);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Vault.InsufficientLiquidity.selector,
-                10_000e6,
-                5_000e6
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientLiquidity.selector, 10_000e6, 5_000e6));
 
         vm.prank(alice);
         vault.withdraw(10_000e6, alice, alice);
@@ -338,11 +265,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 aliceBalanceAfter = usdc.balanceOf(alice);
         uint256 expectedAssets = vault.previewRedeem(sharesToRedeem);
 
-        assertEq(
-            assets,
-            expectedAssets,
-            "Should receive exact calculated assets"
-        );
+        assertEq(assets, expectedAssets, "Should receive exact calculated assets");
         assertApproxEqAbs(aliceBalanceAfter - aliceBalanceBefore, assets, 2);
         assertEq(vault.balanceOf(alice), totalShares - sharesToRedeem);
     }
@@ -355,11 +278,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 assets = vault.redeem(totalShares, alice, alice);
         uint256 expectedAssets = vault.previewRedeem(totalShares);
 
-        assertEq(
-            assets,
-            expectedAssets,
-            "Should receive exact calculated assets"
-        );
+        assertEq(assets, expectedAssets, "Should receive exact calculated assets");
         assertEq(vault.balanceOf(alice), 0, "Should have no shares left");
         assertApproxEqAbs(usdc.balanceOf(alice), INITIAL_BALANCE, 2);
     }
@@ -371,11 +290,7 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(alice);
         uint256 assets = vault.mint(sharesToMint, alice);
 
-        assertEq(
-            assets,
-            expectedAssets,
-            "Should require exact calculated assets"
-        );
+        assertEq(assets, expectedAssets, "Should require exact calculated assets");
         assertEq(vault.balanceOf(alice), sharesToMint);
         assertApproxEqAbs(vault.totalAssets(), assets, 1);
     }
@@ -412,20 +327,12 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(alice);
         vault.deposit(1000, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 100_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 100_000e6);
 
         vm.prank(bob);
         uint256 victimShares = vault.deposit(10_000e6, bob);
 
-        assertGt(
-            victimShares,
-            0,
-            "Offset should protect against inflation attack"
-        );
+        assertGt(victimShares, 0, "Offset should protect against inflation attack");
     }
 
     function test_TotalAssets_ReflectsMorphoBalance() public {
@@ -461,12 +368,12 @@ contract MorphoAdapterUnitTest is Test {
     }
 
     function test_MultipleDepositsWithdraws_MaintainsAccounting() public {
-        for (uint i = 0; i < 5; i++) {
+        for (uint256 i = 0; i < 5; i++) {
             vm.prank(alice);
             vault.deposit(10_000e6, alice);
         }
 
-        for (uint i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             vm.prank(alice);
             vault.withdraw(10_000e6, alice, alice);
         }
@@ -497,22 +404,9 @@ contract MorphoAdapterUnitTest is Test {
         uint256 aliceSharesAfter = vault.balanceOf(alice);
 
         assertEq(sharesBurned, requiredShares, "Should burn expected shares");
-        assertEq(
-            aliceSharesAfter,
-            aliceSharesBefore - sharesBurned,
-            "Alice shares should decrease"
-        );
-        assertApproxEqAbs(
-            bobUsdcAfter - bobUsdcBefore,
-            withdrawAmount,
-            2,
-            "Bob should receive assets"
-        );
-        assertEq(
-            vault.allowance(alice, bob),
-            0,
-            "Allowance should be consumed"
-        );
+        assertEq(aliceSharesAfter, aliceSharesBefore - sharesBurned, "Alice shares should decrease");
+        assertApproxEqAbs(bobUsdcAfter - bobUsdcBefore, withdrawAmount, 2, "Bob should receive assets");
+        assertEq(vault.allowance(alice, bob), 0, "Allowance should be consumed");
     }
 
     function test_Withdraw_DelegatedRevertIf_InsufficientAllowance() public {
@@ -552,17 +446,8 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 aliceUsdcAfter = usdc.balanceOf(alice);
 
-        assertEq(
-            sharesBurned,
-            expectedShares,
-            "Should burn exact calculated shares"
-        );
-        assertApproxEqAbs(
-            aliceUsdcAfter - aliceUsdcBefore,
-            withdrawAmount,
-            2,
-            "Alice should receive assets"
-        );
+        assertEq(sharesBurned, expectedShares, "Should burn exact calculated shares");
+        assertApproxEqAbs(aliceUsdcAfter - aliceUsdcBefore, withdrawAmount, 2, "Alice should receive assets");
     }
 
     function test_Withdraw_DelegatedWithUnlimitedApproval() public {
@@ -581,22 +466,9 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 bobUsdcAfter = usdc.balanceOf(bob);
 
-        assertEq(
-            sharesBurned,
-            expectedShares,
-            "Should burn exact calculated shares"
-        );
-        assertApproxEqAbs(
-            bobUsdcAfter - bobUsdcBefore,
-            withdrawAmount,
-            2,
-            "Bob should receive assets"
-        );
-        assertEq(
-            vault.allowance(alice, bob),
-            type(uint256).max,
-            "Unlimited allowance should remain"
-        );
+        assertEq(sharesBurned, expectedShares, "Should burn exact calculated shares");
+        assertApproxEqAbs(bobUsdcAfter - bobUsdcBefore, withdrawAmount, 2, "Bob should receive assets");
+        assertEq(vault.allowance(alice, bob), type(uint256).max, "Unlimited allowance should remain");
     }
 
     function _dealAndApprove(address user, uint256 amount) internal {
@@ -624,9 +496,7 @@ contract MorphoAdapterUnitTest is Test {
 
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -635,19 +505,13 @@ contract MorphoAdapterUnitTest is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
 
         vault.permit(owner, bob, amount, deadline, v, r, s);
 
-        assertEq(
-            vault.allowance(owner, bob),
-            amount,
-            "Allowance should be set"
-        );
+        assertEq(vault.allowance(owner, bob), amount, "Allowance should be set");
         assertEq(vault.nonces(owner), nonce + 1, "Nonce should increment");
     }
 
@@ -668,9 +532,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 nonce = vault.nonces(owner);
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 requiredShares,
@@ -679,9 +541,7 @@ contract MorphoAdapterUnitTest is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
 
@@ -694,12 +554,7 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 bobUsdcAfter = usdc.balanceOf(bob);
 
-        assertApproxEqAbs(
-            bobUsdcAfter - bobUsdcBefore,
-            withdrawAmount,
-            2,
-            "Bob should receive assets after permit"
-        );
+        assertApproxEqAbs(bobUsdcAfter - bobUsdcBefore, withdrawAmount, 2, "Bob should receive assets after permit");
     }
 
     function test_Permit_RevertIf_Expired() public {
@@ -712,9 +567,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 nonce = vault.nonces(owner);
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -723,9 +576,7 @@ contract MorphoAdapterUnitTest is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
 
@@ -743,9 +594,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 nonce = vault.nonces(owner);
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -754,9 +603,7 @@ contract MorphoAdapterUnitTest is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         uint256 wrongPrivateKey = 0xBADBAD;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPrivateKey, digest);
@@ -775,9 +622,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 nonce = vault.nonces(owner);
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 bob,
                 amount,
@@ -786,9 +631,7 @@ contract MorphoAdapterUnitTest is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
 
@@ -810,18 +653,10 @@ contract MorphoAdapterUnitTest is Test {
         uint256 deadline = block.timestamp + 1 hours;
 
         _permitHelper(ownerPrivateKey, owner, bob, amount, 0, deadline);
-        assertEq(
-            vault.nonces(owner),
-            1,
-            "Nonce should be 1 after first permit"
-        );
+        assertEq(vault.nonces(owner), 1, "Nonce should be 1 after first permit");
 
         _permitHelper(ownerPrivateKey, owner, alice, amount, 1, deadline);
-        assertEq(
-            vault.nonces(owner),
-            2,
-            "Nonce should be 2 after second permit"
-        );
+        assertEq(vault.nonces(owner), 2, "Nonce should be 2 after second permit");
     }
 
     function _permitHelper(
@@ -834,9 +669,7 @@ contract MorphoAdapterUnitTest is Test {
     ) internal {
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 spender,
                 amount,
@@ -845,9 +678,7 @@ contract MorphoAdapterUnitTest is Test {
             )
         );
 
-        bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
-        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
         vault.permit(owner, spender, amount, deadline, v, r, s);
@@ -858,9 +689,7 @@ contract MorphoAdapterUnitTest is Test {
 
         bytes32 expectedDomainSeparator = keccak256(
             abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes(vault.name())),
                 keccak256(bytes("1")),
                 block.chainid,
@@ -909,9 +738,7 @@ contract MorphoAdapterUnitTest is Test {
     function test_SetRewardFee_RevertIf_ExceedsMaximum() public {
         uint16 invalidFee = 2001; // Above MAX_REWARD_FEE
 
-        vm.expectRevert(
-            abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee));
         vault.setRewardFee(invalidFee);
     }
 
@@ -927,11 +754,7 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
@@ -940,9 +763,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
         assertGt(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "Treasury should receive fees from profit before fee change"
+            treasurySharesAfter, treasurySharesBefore, "Treasury should receive fees from profit before fee change"
         );
     }
 
@@ -952,26 +773,15 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 lastTotalAssetsBefore = vault.lastTotalAssets();
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         vault.setRewardFee(1000);
 
         uint256 lastTotalAssetsAfter = vault.lastTotalAssets();
 
-        assertGt(
-            lastTotalAssetsAfter,
-            lastTotalAssetsBefore,
-            "lastTotalAssets should be updated after fee harvest"
-        );
+        assertGt(lastTotalAssetsAfter, lastTotalAssetsBefore, "lastTotalAssets should be updated after fee harvest");
         assertApproxEqAbs(
-            lastTotalAssetsAfter,
-            vault.totalAssets(),
-            1,
-            "lastTotalAssets should match current totalAssets"
+            lastTotalAssetsAfter, vault.totalAssets(), 1, "lastTotalAssets should match current totalAssets"
         );
     }
 
@@ -988,11 +798,7 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(feeManager);
         vault.setRewardFee(newFee);
 
-        assertEq(
-            vault.rewardFee(),
-            newFee,
-            "Fee manager should be able to set fee"
-        );
+        assertEq(vault.rewardFee(), newFee, "Fee manager should be able to set fee");
     }
 
     function test_SetRewardFee_MultipleChanges() public {
@@ -1022,11 +828,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 initialTreasuryShares = vault.balanceOf(treasury);
 
         uint256 profit = 10_000e6;
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + profit
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
 
         vm.expectEmit(false, false, false, false);
         emit Vault.FeesHarvested(0, 0, 0); // Will check actual values below
@@ -1035,11 +837,7 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
-        assertGt(
-            treasurySharesAfter,
-            initialTreasuryShares,
-            "Treasury should receive fee shares"
-        );
+        assertGt(treasurySharesAfter, initialTreasuryShares, "Treasury should receive fee shares");
     }
 
     function test_HarvestFees_EmitsEvent() public {
@@ -1047,11 +845,7 @@ contract MorphoAdapterUnitTest is Test {
         vault.deposit(100_000e6, alice);
 
         uint256 profit = 10_000e6;
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + profit
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
 
         vm.recordLogs();
         vault.harvestFees();
@@ -1059,20 +853,14 @@ contract MorphoAdapterUnitTest is Test {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool foundFeesHarvestedEvent = false;
 
-        for (uint i = 0; i < logs.length; i++) {
-            if (
-                logs[i].topics[0] ==
-                keccak256("FeesHarvested(uint256,uint256,uint256)")
-            ) {
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("FeesHarvested(uint256,uint256,uint256)")) {
                 foundFeesHarvestedEvent = true;
                 break;
             }
         }
 
-        assertTrue(
-            foundFeesHarvestedEvent,
-            "FeesHarvested event should be emitted"
-        );
+        assertTrue(foundFeesHarvestedEvent, "FeesHarvested event should be emitted");
     }
 
     function test_HarvestFees_NoProfit() public {
@@ -1087,16 +875,8 @@ contract MorphoAdapterUnitTest is Test {
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
         uint256 lastTotalAssetsAfter = vault.lastTotalAssets();
 
-        assertEq(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "Treasury should not receive shares without profit"
-        );
-        assertEq(
-            lastTotalAssetsAfter,
-            lastTotalAssetsBefore,
-            "lastTotalAssets should stay the same"
-        );
+        assertEq(treasurySharesAfter, treasurySharesBefore, "Treasury should not receive shares without profit");
+        assertEq(lastTotalAssetsAfter, lastTotalAssetsBefore, "lastTotalAssets should stay the same");
     }
 
     function test_HarvestFees_WithLoss() public {
@@ -1112,22 +892,14 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
-        assertEq(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "Treasury should not receive shares when there's a loss"
-        );
+        assertEq(treasurySharesAfter, treasurySharesBefore, "Treasury should not receive shares when there's a loss");
     }
 
     function test_HarvestFees_UpdatesLastTotalAssets() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         uint256 totalAssetsBefore = vault.totalAssets();
 
@@ -1136,10 +908,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 lastTotalAssetsAfter = vault.lastTotalAssets();
 
         assertApproxEqAbs(
-            lastTotalAssetsAfter,
-            totalAssetsBefore,
-            1,
-            "lastTotalAssets should be updated to current totalAssets"
+            lastTotalAssetsAfter, totalAssetsBefore, 1, "lastTotalAssets should be updated to current totalAssets"
         );
     }
 
@@ -1153,11 +922,7 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 lastTotalAssetsAfter = vault.lastTotalAssets();
 
-        assertEq(
-            lastTotalAssetsAfter,
-            lastTotalAssetsBefore,
-            "lastTotalAssets should be updated even with zero supply"
-        );
+        assertEq(lastTotalAssetsAfter, lastTotalAssetsBefore, "lastTotalAssets should be updated even with zero supply");
     }
 
     function test_HarvestFees_WhenTotalAssetsIsZero() public {
@@ -1172,33 +937,19 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 5_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 5_000e6);
 
         vault.harvestFees();
         uint256 treasurySharesAfterFirst = vault.balanceOf(treasury);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 3_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 3_000e6);
 
         vault.harvestFees();
         uint256 treasurySharesAfterSecond = vault.balanceOf(treasury);
 
+        assertGt(treasurySharesAfterFirst, 0, "Treasury should have shares after first harvest");
         assertGt(
-            treasurySharesAfterFirst,
-            0,
-            "Treasury should have shares after first harvest"
-        );
-        assertGt(
-            treasurySharesAfterSecond,
-            treasurySharesAfterFirst,
-            "Treasury should have more shares after second harvest"
+            treasurySharesAfterSecond, treasurySharesAfterFirst, "Treasury should have more shares after second harvest"
         );
     }
 
@@ -1206,11 +957,7 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(alice);
         vault.deposit(50_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
@@ -1219,22 +966,14 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
-        assertGt(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "Deposit should automatically harvest fees"
-        );
+        assertGt(treasurySharesAfter, treasurySharesBefore, "Deposit should automatically harvest fees");
     }
 
     function test_HarvestFees_CalledAutomaticallyOnWithdraw() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
@@ -1243,11 +982,7 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
-        assertGt(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "Withdraw should automatically harvest fees"
-        );
+        assertGt(treasurySharesAfter, treasurySharesBefore, "Withdraw should automatically harvest fees");
     }
 
     function test_HarvestFees_CalledAutomaticallyOnMint() public {
@@ -1264,22 +999,14 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
-        assertGt(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "Mint should automatically harvest fees from second profit"
-        );
+        assertGt(treasurySharesAfter, treasurySharesBefore, "Mint should automatically harvest fees from second profit");
     }
 
     function test_HarvestFees_CalledAutomaticallyOnRedeem() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
         uint256 aliceShares = vault.balanceOf(alice);
@@ -1289,11 +1016,7 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
-        assertGt(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "Redeem should automatically harvest fees"
-        );
+        assertGt(treasurySharesAfter, treasurySharesBefore, "Redeem should automatically harvest fees");
     }
 
     function test_HarvestFees_CalculatesCorrectFeeAmount() public {
@@ -1301,26 +1024,16 @@ contract MorphoAdapterUnitTest is Test {
         vault.deposit(100_000e6, alice);
 
         uint256 profit = 10_000e6;
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + profit
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
 
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.MAX_BASIS_POINTS();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
 
         vault.harvestFees();
 
         uint256 treasuryShares = vault.balanceOf(treasury);
         uint256 treasuryAssets = vault.convertToAssets(treasuryShares);
 
-        assertApproxEqAbs(
-            treasuryAssets,
-            expectedFeeAmount,
-            2,
-            "Treasury assets should match expected fee amount"
-        );
+        assertApproxEqAbs(treasuryAssets, expectedFeeAmount, 2, "Treasury assets should match expected fee amount");
     }
 
     function test_HarvestFees_WithZeroFee() public {
@@ -1329,11 +1042,7 @@ contract MorphoAdapterUnitTest is Test {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
@@ -1341,11 +1050,7 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 treasurySharesAfter = vault.balanceOf(treasury);
 
-        assertEq(
-            treasurySharesAfter,
-            treasurySharesBefore,
-            "No fees should be collected when fee is zero"
-        );
+        assertEq(treasurySharesAfter, treasurySharesBefore, "No fees should be collected when fee is zero");
     }
 
     function test_HarvestFees_WithMaxFee() public {
@@ -1355,11 +1060,7 @@ contract MorphoAdapterUnitTest is Test {
         vault.deposit(100_000e6, alice);
 
         uint256 profit = 10_000e6;
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + profit
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
 
         uint256 expectedFeeAmount = (profit * 2000) / vault.MAX_BASIS_POINTS();
 
@@ -1368,12 +1069,7 @@ contract MorphoAdapterUnitTest is Test {
         uint256 treasuryShares = vault.balanceOf(treasury);
         uint256 treasuryAssets = vault.convertToAssets(treasuryShares);
 
-        assertApproxEqAbs(
-            treasuryAssets,
-            expectedFeeAmount,
-            2,
-            "Treasury should receive 20% of profit"
-        );
+        assertApproxEqAbs(treasuryAssets, expectedFeeAmount, 2, "Treasury should receive 20% of profit");
     }
 
     function test_GetPendingFees_WithProfit() public {
@@ -1381,22 +1077,12 @@ contract MorphoAdapterUnitTest is Test {
         vault.deposit(100_000e6, alice);
 
         uint256 profit = 10_000e6;
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + profit
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
 
         uint256 pendingFees = vault.getPendingFees();
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) /
-            vault.MAX_BASIS_POINTS();
+        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
 
-        assertApproxEqAbs(
-            pendingFees,
-            expectedFeeAmount,
-            1,
-            "Pending fees should match expected fee amount"
-        );
+        assertApproxEqAbs(pendingFees, expectedFeeAmount, 1, "Pending fees should match expected fee amount");
     }
 
     function test_GetPendingFees_NoProfit() public {
@@ -1417,38 +1103,22 @@ contract MorphoAdapterUnitTest is Test {
 
         uint256 pendingFees = vault.getPendingFees();
 
-        assertEq(
-            pendingFees,
-            0,
-            "Pending fees should be zero when there's a loss"
-        );
+        assertEq(pendingFees, 0, "Pending fees should be zero when there's a loss");
     }
 
     function test_GetPendingFees_AfterHarvest() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(
-            address(usdc),
-            address(morpho),
-            usdc.balanceOf(address(morpho)) + 10_000e6
-        );
+        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
 
         uint256 pendingFeesBefore = vault.getPendingFees();
-        assertGt(
-            pendingFeesBefore,
-            0,
-            "Should have pending fees before harvest"
-        );
+        assertGt(pendingFeesBefore, 0, "Should have pending fees before harvest");
 
         // Harvest
         vault.harvestFees();
 
         uint256 pendingFeesAfter = vault.getPendingFees();
-        assertEq(
-            pendingFeesAfter,
-            0,
-            "Pending fees should be zero after harvest"
-        );
+        assertEq(pendingFeesAfter, 0, "Pending fees should be zero after harvest");
     }
 }

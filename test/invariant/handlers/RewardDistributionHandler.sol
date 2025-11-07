@@ -76,19 +76,15 @@ contract RewardDistributionHandler is Test {
     }
 
     function _checkInvariant() internal {
-        uint256 treasurySharesAfter = vault.balanceOf(
-            address(rewardDistributor)
-        );
+        uint256 treasurySharesAfter = vault.balanceOf(address(rewardDistributor));
         uint256 lastTotalAssetsAfter = vault.lastTotalAssets();
 
         assertTrue(
-            treasurySharesAfter >= treasurySharesBefore,
-            "INVARIANT VIOLATION: Treasury shares decreased (burned)"
+            treasurySharesAfter >= treasurySharesBefore, "INVARIANT VIOLATION: Treasury shares decreased (burned)"
         );
 
         bool hadProfit = totalAssetsBefore > lastTotalAssetsBefore;
-        bool treasurySharesIncreased = treasurySharesAfter >
-            treasurySharesBefore;
+        bool treasurySharesIncreased = treasurySharesAfter > treasurySharesBefore;
 
         if (treasurySharesIncreased) {
             treasuryMintsCount++;
@@ -96,20 +92,13 @@ contract RewardDistributionHandler is Test {
             if (!hadProfit) {
                 treasuryMintsWithoutProfit++;
                 emit log_named_uint(
-                    "Treasury shares minted WITHOUT profit!",
-                    treasurySharesAfter - treasurySharesBefore
+                    "Treasury shares minted WITHOUT profit!", treasurySharesAfter - treasurySharesBefore
                 );
                 emit log_named_uint("totalAssetsBefore", totalAssetsBefore);
-                emit log_named_uint(
-                    "lastTotalAssetsBefore",
-                    lastTotalAssetsBefore
-                );
+                emit log_named_uint("lastTotalAssetsBefore", lastTotalAssetsBefore);
             }
 
-            assertTrue(
-                hadProfit,
-                "INVARIANT VIOLATION: Treasury shares minted without profit"
-            );
+            assertTrue(hadProfit, "INVARIANT VIOLATION: Treasury shares minted without profit");
         }
 
         if (hadProfit && lastTotalAssetsAfter > lastTotalAssetsBefore) {
@@ -119,15 +108,10 @@ contract RewardDistributionHandler is Test {
             totalProfitHarvested += profit;
 
             if (supply > 0 && profit > 0 && totalAssetsBefore > 0) {
-                uint256 feeAmount = profit.mulDiv(
-                    vault.rewardFee(),
-                    vault.MAX_BASIS_POINTS(),
-                    Math.Rounding.Ceil
-                );
+                uint256 feeAmount = profit.mulDiv(vault.rewardFee(), vault.MAX_BASIS_POINTS(), Math.Rounding.Ceil);
 
                 if (feeAmount > 0 && feeAmount < totalAssetsBefore) {
-                    uint256 expectedTreasuryShares = (feeAmount * supply) /
-                        (totalAssetsBefore - feeAmount);
+                    uint256 expectedTreasuryShares = (feeAmount * supply) / (totalAssetsBefore - feeAmount);
 
                     totalExpectedTreasuryShares += expectedTreasuryShares;
 
@@ -137,8 +121,7 @@ contract RewardDistributionHandler is Test {
                             "INVARIANT VIOLATION: Profit harvested but treasury received no shares"
                         );
 
-                        uint256 actualSharesMinted = treasurySharesAfter -
-                            treasurySharesBefore;
+                        uint256 actualSharesMinted = treasurySharesAfter - treasurySharesBefore;
 
                         assertApproxEqAbs(
                             actualSharesMinted,
@@ -159,8 +142,7 @@ contract RewardDistributionHandler is Test {
                 uint256 userSharesAfter = vault.balanceOf(actors[i]);
 
                 assertTrue(
-                    userSharesAfter == userSharesBefore,
-                    "INVARIANT VIOLATION: User shares changed during harvest"
+                    userSharesAfter == userSharesBefore, "INVARIANT VIOLATION: User shares changed during harvest"
                 );
             }
         }

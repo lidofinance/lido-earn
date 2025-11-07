@@ -28,9 +28,7 @@ contract VaultEmergencyTest is VaultTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                alice,
-                vault.EMERGENCY_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.EMERGENCY_ROLE()
             )
         );
         vm.prank(alice);
@@ -150,9 +148,7 @@ contract VaultEmergencyTest is VaultTestBase {
         vault.deposit(10_000e6, bob);
     }
 
-    function testFuzz_EmergencyWithdraw_ResetsLastTotalAssets(
-        uint96 amount
-    ) public {
+    function testFuzz_EmergencyWithdraw_ResetsLastTotalAssets(uint96 amount) public {
         vm.assume(amount > vault.MIN_FIRST_DEPOSIT());
         asset.mint(alice, amount);
 

@@ -67,13 +67,7 @@ contract VaultDepositTest is VaultTestBase {
     }
 
     function test_FirstDeposit_RevertIf_TooSmall() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Vault.FirstDepositTooSmall.selector,
-                1000,
-                999
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(Vault.FirstDepositTooSmall.selector, 1000, 999));
 
         vm.prank(alice);
         vault.deposit(999, alice);
@@ -128,16 +122,11 @@ contract VaultDepositTest is VaultTestBase {
     }
 
     function test_Mint_RevertIf_FirstDepositTooSmall() public {
-        uint256 sharesToMint = (vault.MIN_FIRST_DEPOSIT() - 1) *
-            10 ** vault.OFFSET();
+        uint256 sharesToMint = (vault.MIN_FIRST_DEPOSIT() - 1) * 10 ** vault.OFFSET();
         uint256 expectedAssets = vault.previewMint(sharesToMint);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Vault.FirstDepositTooSmall.selector,
-                vault.MIN_FIRST_DEPOSIT(),
-                expectedAssets
-            )
+            abi.encodeWithSelector(Vault.FirstDepositTooSmall.selector, vault.MIN_FIRST_DEPOSIT(), expectedAssets)
         );
 
         vm.prank(alice);

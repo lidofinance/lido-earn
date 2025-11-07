@@ -15,11 +15,7 @@ contract VaultPausableTest is VaultTestBase {
 
     function test_Pause_RevertIf_NotPauser() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                alice,
-                vault.PAUSER_ROLE()
-            )
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.PAUSER_ROLE())
         );
         vm.prank(alice);
         vault.pause();
@@ -47,11 +43,7 @@ contract VaultPausableTest is VaultTestBase {
         vault.pause();
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                alice,
-                vault.PAUSER_ROLE()
-            )
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.PAUSER_ROLE())
         );
         vm.prank(alice);
         vault.unpause();

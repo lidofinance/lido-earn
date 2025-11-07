@@ -23,12 +23,7 @@ contract VaultHandler is Test {
     uint256 public mintsCount;
     uint256 public redeemsCount;
 
-    constructor(
-        MorphoAdapter _vault,
-        MockERC20 _asset,
-        MockMetaMorpho _morpho,
-        address[] memory _actors
-    ) {
+    constructor(MorphoAdapter _vault, MockERC20 _asset, MockMetaMorpho _morpho, address[] memory _actors) {
         vault = _vault;
         asset = _asset;
         morpho = _morpho;
