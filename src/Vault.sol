@@ -29,9 +29,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
     /* ========== STATE VARIABLES ========== */
 
-    uint256 public lastTotalAssets;
     address public immutable TREASURY;
     uint8 public immutable OFFSET;
+
+    uint256 public lastTotalAssets;
     uint16 public rewardFee;
 
     /* ========== EVENTS ========== */
@@ -43,9 +44,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     );
 
     event FeesHarvested(uint256 profit, uint256 feeAmount, uint256 sharesMinted);
-
     event RewardFeeUpdated(uint256 oldFee, uint256 newFee);
     event EmergencyWithdrawal(address indexed receiver, uint256 amount);
+    event VaultPaused(uint256 timestamp);
+    event VaultUnpaused(uint256 timestamp);
 
     /* ========== ERRORS ========== */
 
@@ -286,10 +288,12 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
     function pause() external onlyRole(PAUSER_ROLE) {
         _pause();
+        emit VaultPaused(block.timestamp);
     }
 
     function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
+        emit VaultUnpaused(block.timestamp);
     }
 
     /* ========== EMERGENCY FUNCTIONS ========== */

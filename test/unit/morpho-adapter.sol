@@ -124,7 +124,6 @@ contract MorphoAdapterUnitTest is Test {
         vault.deposit(depositAmount, alice);
 
         uint256 morphoBalanceAfter = morpho.balanceOf(address(vault));
-        // MockMetaMorpho теперь использует offset, первый депозит: depositAmount * 10^OFFSET
         uint256 expectedMorphoShares = depositAmount * 10 ** OFFSET;
 
         assertEq(morphoBalanceAfter, expectedMorphoShares, "Morpho shares should include offset multiplication");

@@ -18,6 +18,7 @@ contract RewardDistributor is AccessControl {
     }
 
     Recipient[] public recipients;
+    mapping(address => bool) private recipientExists;
 
     event RewardsDistributed(address indexed token, uint256 totalAmount);
     event RecipientPaid(address indexed recipient, address indexed token, uint256 amount);
@@ -29,6 +30,7 @@ contract RewardDistributor is AccessControl {
     error ZeroBasisPoints();
     error NoBalance();
     error NoShares();
+    error DuplicateRecipient(address account);
 
     constructor(address _manager, address[] memory _recipients, uint256[] memory _basisPoints) {
         if (_recipients.length != _basisPoints.length) {
@@ -42,17 +44,23 @@ contract RewardDistributor is AccessControl {
         uint256 totalBps = 0;
 
         for (uint256 i = 0; i < _recipients.length; i++) {
-            if (_recipients[i] == address(0)) {
+            address recipientAccount = _recipients[i];
+            uint256 recipientBps = _basisPoints[i];
+
+            if (recipientAccount == address(0)) {
                 revert ZeroAddress();
             }
-
-            if (_basisPoints[i] == 0) {
+            if (recipientBps == 0) {
                 revert ZeroBasisPoints();
             }
+            if (recipientExists[recipientAccount]) {
+                revert DuplicateRecipient(recipientAccount);
+            }
 
-            recipients.push(Recipient({account: _recipients[i], basisPoints: _basisPoints[i]}));
+            recipientExists[recipientAccount] = true;
+            recipients.push(Recipient({account: recipientAccount, basisPoints: recipientBps}));
 
-            totalBps += _basisPoints[i];
+            totalBps += recipientBps;
         }
 
         if (totalBps != MAX_BASIS_POINTS) {
@@ -90,7 +98,6 @@ contract RewardDistributor is AccessControl {
 
             if (amount > 0) {
                 tokenContract.safeTransfer(recipient.account, amount);
-
                 emit RecipientPaid(recipient.account, token, amount);
             }
         }
