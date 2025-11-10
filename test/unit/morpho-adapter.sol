@@ -129,6 +129,16 @@ contract MorphoAdapterUnitTest is Test {
         assertEq(morphoBalanceAfter, expectedMorphoShares, "Morpho shares should include offset multiplication");
     }
 
+    function test_Deposit_RevertIf_MorphoReturnsZeroShares() public {
+        morpho.setForceZeroDeposit(true);
+
+        vm.expectRevert(MorphoAdapter.MorphoDepositFailed.selector);
+        vm.prank(alice);
+        vault.deposit(10_000e6, alice);
+
+        morpho.setForceZeroDeposit(false);
+    }
+
     function test_Deposit_RevertIf_ZeroAmount() public {
         vm.expectRevert(Vault.ZeroAmount.selector);
         vm.prank(alice);
@@ -350,6 +360,26 @@ contract MorphoAdapterUnitTest is Test {
         uint256 assets = vault.convertToAssets(shares);
 
         assertApproxEqAbs(assets, 20_000e6, 5);
+    }
+
+    function test_EmergencyWithdraw_ReturnsZeroWhenNoShares() public {
+        address receiver = makeAddr("receiver");
+        uint256 withdrawn = vault.emergencyWithdraw(receiver);
+
+        assertEq(withdrawn, 0);
+        assertEq(usdc.balanceOf(receiver), 0);
+    }
+
+    function test_EmergencyWithdraw_RedeemsMorphoShares() public {
+        vm.prank(alice);
+        vault.deposit(80_000e6, alice);
+
+        address receiver = makeAddr("receiver");
+        uint256 withdrawn = vault.emergencyWithdraw(receiver);
+
+        assertEq(withdrawn, 80_000e6);
+        assertEq(usdc.balanceOf(receiver), 80_000e6);
+        assertEq(morpho.balanceOf(address(vault)), 0);
     }
 
     function testFuzz_Withdraw_DelegatedWithApproval(uint96 depositAmount, uint96 withdrawAmount) public {

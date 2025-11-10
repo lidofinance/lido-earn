@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {VaultTestBase} from "./VaultTestBase.sol";
 import {Vault} from "src/Vault.sol";
+import {MockVault} from "test/mocks/MockVault.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
@@ -83,6 +84,20 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientShares.selector, sharesRequested, shares));
         vm.prank(alice);
         vault.withdraw(20_000e6, alice, alice);
+    }
+
+    function test_Withdraw_RevertIf_ProtocolReturnsLessAssets() public {
+        vm.prank(alice);
+        vault.deposit(50_000e6, alice);
+
+        vault.setForcedShortfall(1);
+
+        uint256 withdrawAmount = 10_000e6;
+        uint256 returnedAmount = withdrawAmount - 1;
+
+        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientLiquidity.selector, withdrawAmount, returnedAmount));
+        vm.prank(alice);
+        vault.withdraw(withdrawAmount, alice, alice);
     }
 
     function test_Withdraw_DelegatedWithApproval() public {
@@ -564,5 +579,24 @@ contract VaultWithdrawTest is VaultTestBase {
 
         // Should be very close (allow small rounding difference)
         assertApproxEqAbs(actualAssets, previewedAssets, 2);
+    }
+
+    /* ========== COVERAGE TESTS FOR EDGE CASES ========== */
+
+    /// @dev Coverage: Vault.sol line 169 - if (sharesBurned == 0) revert ZeroAmount();
+    /// @notice Tests that withdraw reverts when previewWithdraw returns 0 shares
+    function test_Withdraw_RevertIf_SharesBurnedIsZero() public {
+        // Setup: Make a deposit first
+        vm.prank(alice);
+        vault.deposit(10000, alice);
+
+        // Force previewWithdraw to return 0
+        MockVault(address(vault)).setForceZeroPreviewWithdraw(true);
+
+        // Try to withdraw - should revert with ZeroAmount
+        vm.startPrank(alice);
+        vm.expectRevert(Vault.ZeroAmount.selector);
+        vault.withdraw(5000, alice, alice);
+        vm.stopPrank();
     }
 }

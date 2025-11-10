@@ -87,6 +87,25 @@ contract VaultEmergencyTest is VaultTestBase {
         assertTrue(vault.paused());
     }
 
+    function test_EmergencyWithdraw_EmitsEventAndTransfersProfit() public {
+        vm.prank(alice);
+        vault.deposit(50_000e6, alice);
+
+        // simulate protocol profit
+        asset.mint(address(vault), 25_000e6);
+
+        address receiver = makeAddr("receiver");
+        uint256 totalBefore = vault.totalAssets();
+
+        vm.expectEmit(true, false, false, true);
+        emit Vault.EmergencyWithdrawal(receiver, totalBefore);
+
+        vault.emergencyWithdraw(receiver);
+
+        assertEq(asset.balanceOf(receiver), totalBefore);
+        assertEq(vault.totalAssets(), 0);
+    }
+
     function test_EmergencyWithdraw_WhenAlreadyPaused() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);

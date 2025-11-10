@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 import {Vault} from "src/Vault.sol";
+import {MorphoAdapter} from "src/adapters/Morpho.sol";
 import {MockVault} from "test/mocks/MockVault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 
@@ -316,6 +317,26 @@ contract VaultConstructorTest is Test {
             treasury,
             VALID_REWARD_FEE,
             offset,
+            VAULT_NAME,
+            VAULT_SYMBOL
+        );
+    }
+
+    /* ========== MORPHO ADAPTER CONSTRUCTOR TESTS ========== */
+
+    /// @notice Test that MorphoAdapter constructor reverts when morphoVault address is zero
+    /// @dev Coverage: src/adapters/Morpho.sol:35 - if (morphoVault_ == address(0)) revert MorphoVaultZeroAddress();
+    function test_MorphoConstructor_RevertWhen_MorphoVaultIsZeroAddress() public {
+        asset = new MockERC20("USD Coin", "USDC", 6);
+
+        vm.expectRevert(MorphoAdapter.MorphoVaultZeroAddress.selector);
+
+        new MorphoAdapter(
+            address(asset),
+            address(0), // Zero address for morphoVault
+            treasury,
+            VALID_REWARD_FEE,
+            VALID_OFFSET,
             VAULT_NAME,
             VAULT_SYMBOL
         );

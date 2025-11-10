@@ -12,6 +12,7 @@ contract MockMetaMorpho is ERC4626 {
     uint256 public yieldRate = 1000;
     uint256 public liquidityCap = type(uint256).max;
     uint8 private immutable _offset;
+    bool public forceZeroDeposit;
 
     event YieldAccrued(uint256 amount);
 
@@ -28,6 +29,18 @@ contract MockMetaMorpho is ERC4626 {
 
     function getSharePrice() external view returns (uint256) {
         return totalSupply() > 0 ? (totalAssets() * 1e18) / totalSupply() : 1e18;
+    }
+
+    function setForceZeroDeposit(bool status) external {
+        forceZeroDeposit = status;
+    }
+
+    function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
+        if (forceZeroDeposit) {
+            IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
+            return 0;
+        }
+        return super.deposit(assets, receiver);
     }
 
     function maxWithdraw(address owner) public view override returns (uint256) {

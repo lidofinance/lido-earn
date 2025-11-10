@@ -118,6 +118,18 @@ contract VaultAccessControlTest is VaultTestBase {
         assertFalse(vault.hasRole(pauserRole, pauser));
     }
 
+    function test_AccessControl_RenounceRole_RevertIf_CallerDiffers() public {
+        address pauser = makeAddr("pauser");
+        bytes32 pauserRole = vault.PAUSER_ROLE();
+
+        vault.grantRole(pauserRole, pauser);
+        assertTrue(vault.hasRole(pauserRole, pauser));
+
+        vm.prank(alice);
+        vm.expectRevert(IAccessControl.AccessControlBadConfirmation.selector);
+        vault.renounceRole(pauserRole, pauser);
+    }
+
     function test_AccessControl_DeployerGetsAllRoles() public view {
         bytes32 adminRole = vault.DEFAULT_ADMIN_ROLE();
         bytes32 pauserRole = vault.PAUSER_ROLE();
