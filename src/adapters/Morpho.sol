@@ -58,11 +58,7 @@ contract MorphoAdapter is Vault {
         return shares;
     }
 
-    function _withdrawFromProtocol(uint256 assets, address receiver)
-        internal
-        override
-        returns (uint256)
-    {
+    function _withdrawFromProtocol(uint256 assets, address receiver) internal override returns (uint256) {
         uint256 availableAssets = MORPHO_VAULT.maxWithdraw(address(this));
 
         if (assets > availableAssets) {

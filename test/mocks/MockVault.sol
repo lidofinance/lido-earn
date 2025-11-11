@@ -67,11 +67,7 @@ contract MockVault is Vault {
         return assets;
     }
 
-    function _withdrawFromProtocol(uint256 assets, address receiver)
-        internal
-        override
-        returns (uint256)
-    {
+    function _withdrawFromProtocol(uint256 assets, address receiver) internal override returns (uint256) {
         uint256 shortfall = forcedShortfall;
         if (shortfall > assets) {
             shortfall = assets;

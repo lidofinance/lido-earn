@@ -359,10 +359,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @param assets Amount of assets to deposit
      * @return protocolSharesReceived Amount of protocol shares received (if applicable)
      */
-    function _depositToProtocol(uint256 assets)
-        internal
-        virtual
-        returns (uint256 protocolSharesReceived);
+    function _depositToProtocol(uint256 assets) internal virtual returns (uint256 protocolSharesReceived);
 
     /**
      * @notice Withdraws assets from the underlying protocol
@@ -371,10 +368,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @param receiver Address that will receive the assets
      * @return actualAssets Actual amount of assets withdrawn (may differ due to protocol constraints)
      */
-    function _withdrawFromProtocol(uint256 assets, address receiver)
-        internal
-        virtual
-        returns (uint256 actualAssets);
+    function _withdrawFromProtocol(uint256 assets, address receiver) internal virtual returns (uint256 actualAssets);
 
     /* ========== FEE MANAGEMENT ========== */
 
@@ -403,21 +397,41 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         if (currentTotal > lastTotalAssets) {
             uint256 profit = currentTotal - lastTotalAssets;
+            uint256 sharesMinted = _calculateFeeShares(currentTotal, supply);
 
-            uint256 feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
+            if (sharesMinted > 0) {
+                uint256 feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
+                if (feeAmount > profit) feeAmount = profit;
 
-            if (feeAmount > profit) feeAmount = profit;
-            if (feeAmount > 0 && feeAmount < currentTotal) {
-                uint256 sharesMinted = feeAmount.mulDiv(supply, currentTotal - feeAmount, Math.Rounding.Floor);
-
-                if (sharesMinted > 0) {
-                    _mint(TREASURY, sharesMinted);
-                    emit FeesHarvested(profit, feeAmount, sharesMinted);
-                }
+                _mint(TREASURY, sharesMinted);
+                emit FeesHarvested(profit, feeAmount, sharesMinted);
             }
         }
 
         lastTotalAssets = currentTotal;
+    }
+
+    /**
+     * @notice Internal helper to calculate fee shares that would be minted
+     * @dev Simulates fee calculation without state changes. Used by maxWithdraw and _harvestFees.
+     * @param currentTotal Current total assets in the vault
+     * @param supply Current total supply of vault shares
+     * @return Number of shares that would be minted as fees
+     */
+    function _calculateFeeShares(uint256 currentTotal, uint256 supply) internal view returns (uint256) {
+        if (currentTotal <= lastTotalAssets || rewardFee == 0 || supply == 0) {
+            return 0;
+        }
+
+        uint256 profit = currentTotal - lastTotalAssets;
+        uint256 feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
+
+        if (feeAmount > profit) feeAmount = profit;
+        if (feeAmount > 0 && feeAmount < currentTotal) {
+            return feeAmount.mulDiv(supply, currentTotal - feeAmount, Math.Rounding.Floor);
+        }
+
+        return 0;
     }
 
     /**
@@ -505,6 +519,57 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      */
     function decimals() public view virtual override(ERC20, ERC4626) returns (uint8) {
         return IERC20Metadata(asset()).decimals();
+    }
+
+    /**
+     * @notice Returns maximum assets that can be withdrawn by owner
+     * @dev Overrides ERC4626 to account for pending fees that will be harvested during withdrawal.
+     *      Without this adjustment, maxWithdraw could return a value that causes withdraw to revert.
+     * @param owner Address to check maximum withdrawal for
+     * @return Maximum assets withdrawable accounting for pending fee dilution
+     */
+    function maxWithdraw(address owner) public view virtual override returns (uint256) {
+        uint256 shares = balanceOf(owner);
+        if (shares == 0) return 0;
+
+        uint256 currentTotal = totalAssets();
+        uint256 supply = totalSupply();
+
+        if (supply == 0) return 0;
+
+        uint256 feeShares = _calculateFeeShares(currentTotal, supply);
+        uint256 adjustedSupply = supply + feeShares;
+        uint256 assets = shares.mulDiv(currentTotal, adjustedSupply, Math.Rounding.Floor);
+
+        // Subtract 1 wei to account for rounding asymmetry between preview and execution:
+        // 1. This function uses Floor rounding when converting shares to assets
+        // 2. withdraw() uses previewWithdraw() which applies Ceil rounding for shares calculation
+        // 3. ERC4626's _convertToAssets adds +1 to totalAssets for inflation protection
+        // 4. These differences can cause previewWithdraw to require 1 more share than we calculated
+        // The -1 buffer ensures withdraw(maxWithdraw(user)) never reverts with "InsufficientShares"
+        return assets > 0 ? assets - 1 : 0;
+    }
+
+    /**
+     * @notice Simulates the amount of shares that would be burned to withdraw given assets
+     * @dev Overrides ERC4626 to account for pending fees that will be harvested during withdrawal.
+     *      This ensures the preview matches the actual execution in withdraw().
+     *      Per ERC4626: MUST return "no fewer than" the actual shares that would be burned.
+     * @param assets Amount of assets to withdraw
+     * @return shares Amount of shares that would be burned (accounting for pending fee dilution)
+     */
+    function previewWithdraw(uint256 assets) public view virtual override returns (uint256 shares) {
+        uint256 currentTotal = totalAssets();
+        uint256 supply = totalSupply();
+
+        if (supply == 0 || currentTotal == 0) {
+            return _convertToShares(assets, Math.Rounding.Ceil);
+        }
+
+        uint256 feeShares = _calculateFeeShares(currentTotal, supply);
+        uint256 adjustedSupply = supply + feeShares;
+
+        shares = assets.mulDiv(adjustedSupply, currentTotal, Math.Rounding.Ceil);
     }
 
     /**

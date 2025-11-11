@@ -109,9 +109,10 @@ contract VaultERC4626ComplianceTest is VaultTestBase {
         uint256 aliceShares = vault.balanceOf(alice);
         uint256 maxWithdraw = vault.maxWithdraw(alice);
 
-        // Max withdraw should equal the assets corresponding to alice's shares
+        // maxWithdraw returns slightly less (1 wei) than convertToAssets to account for rounding
+        // This ensures withdraw(maxWithdraw) will never revert due to insufficient shares
         uint256 expectedAssets = vault.convertToAssets(aliceShares);
-        assertEq(maxWithdraw, expectedAssets, "MaxWithdraw should match convertToAssets");
+        assertApproxEqAbs(maxWithdraw, expectedAssets, 1, "MaxWithdraw should be close to convertToAssets");
     }
 
     /// @notice Test that maxRedeem returns user's full share balance
