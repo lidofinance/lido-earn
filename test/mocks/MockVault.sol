@@ -62,12 +62,12 @@ contract MockVault is Vault {
         return super.previewWithdraw(assets);
     }
 
-    function _depositToProtocol(uint256 assets, address /* receiver */ ) internal override returns (uint256) {
+    function _depositToProtocol(uint256 assets) internal override returns (uint256) {
         if (forceZeroProtocolShares) return 0;
         return assets;
     }
 
-    function _withdrawFromProtocol(uint256 assets, address receiver, address /* owner */ )
+    function _withdrawFromProtocol(uint256 assets, address receiver)
         internal
         override
         returns (uint256)

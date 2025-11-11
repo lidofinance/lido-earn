@@ -46,7 +46,7 @@ contract MorphoAdapter is Vault {
         return MORPHO_VAULT.convertToAssets(morphoShares);
     }
 
-    function _depositToProtocol(uint256 assets, address /* receiver */ ) internal override returns (uint256 shares) {
+    function _depositToProtocol(uint256 assets) internal override returns (uint256 shares) {
         shares = MORPHO_VAULT.deposit(assets, address(this));
 
         if (shares == 0) {
@@ -58,7 +58,7 @@ contract MorphoAdapter is Vault {
         return shares;
     }
 
-    function _withdrawFromProtocol(uint256 assets, address receiver, address /* owner */ )
+    function _withdrawFromProtocol(uint256 assets, address receiver)
         internal
         override
         returns (uint256)
