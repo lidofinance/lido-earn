@@ -149,6 +149,16 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     /// @param offset The invalid offset value
     error OffsetTooHigh(uint8 offset);
 
+    /// @notice Thrown when deposit amount exceeds maximum allowed
+    /// @param requested Amount of assets requested to deposit
+    /// @param maximum Maximum amount allowed to deposit
+    error ExceedsMaxDeposit(uint256 requested, uint256 maximum);
+
+    /// @notice Thrown when mint amount exceeds maximum allowed
+    /// @param requested Amount of shares requested to mint
+    /// @param maximum Maximum amount of shares allowed to mint
+    error ExceedsMaxMint(uint256 requested, uint256 maximum);
+
     /* ========== CONSTRUCTOR ========== */
 
     /**
@@ -207,6 +217,11 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         if (assetsToDeposit == 0) revert ZeroAmount();
         if (shareReceiver == address(0)) revert ZeroAddress();
 
+        uint256 maxAssets = maxDeposit(shareReceiver);
+        if (assetsToDeposit > maxAssets) {
+            revert ExceedsMaxDeposit(assetsToDeposit, maxAssets);
+        }
+
         if (totalSupply() == 0 && assetsToDeposit < MIN_FIRST_DEPOSIT) {
             revert FirstDepositTooSmall(MIN_FIRST_DEPOSIT, assetsToDeposit);
         }
@@ -251,6 +266,13 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         assetsRequired = _convertToAssets(sharesToMint, Math.Rounding.Ceil);
         if (assetsRequired == 0) revert ZeroAmount();
+
+        // Check maxDeposit on the actual assets required (after harvest)
+        uint256 maxAssets = maxDeposit(shareReceiver);
+        if (assetsRequired > maxAssets) {
+            revert ExceedsMaxDeposit(assetsRequired, maxAssets);
+        }
+
         if (totalSupply() == 0 && assetsRequired < MIN_FIRST_DEPOSIT) {
             revert FirstDepositTooSmall(MIN_FIRST_DEPOSIT, assetsRequired);
         }
@@ -548,6 +570,74 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         // 4. These differences can cause previewWithdraw to require 1 more share than we calculated
         // The -1 buffer ensures withdraw(maxWithdraw(user)) never reverts with "InsufficientShares"
         return assets > 0 ? assets - 1 : 0;
+    }
+
+    /**
+     * @notice Simulates the amount of shares that would be minted for a given deposit
+     * @dev Overrides ERC4626 to account for pending fees that will be harvested during deposit.
+     *      This ensures the preview matches the actual execution in deposit().
+     *      Per ERC4626: MUST return "no more than" the exact shares that would be minted.
+     * @param assets Amount of assets to deposit
+     * @return shares Amount of shares that would be minted (accounting for pending fee dilution)
+     */
+    function previewDeposit(uint256 assets) public view virtual override returns (uint256 shares) {
+        uint256 currentTotal = totalAssets();
+        uint256 supply = totalSupply();
+
+        if (supply == 0) {
+            return _convertToShares(assets, Math.Rounding.Floor);
+        }
+
+        uint256 feeShares = _calculateFeeShares(currentTotal, supply);
+        uint256 adjustedSupply = supply + feeShares;
+
+        return assets.mulDiv(adjustedSupply, currentTotal, Math.Rounding.Floor);
+    }
+
+    /**
+     * @notice Simulates the amount of assets required to mint given shares
+     * @dev Overrides ERC4626 to account for pending fees that will be harvested during mint.
+     *      This ensures the preview matches the actual execution in mint().
+     *      Per ERC4626: MUST return "no less than" the exact assets required.
+     * @param shares Amount of shares to mint
+     * @return assets Amount of assets required (accounting for pending fee dilution)
+     */
+    function previewMint(uint256 shares) public view virtual override returns (uint256 assets) {
+        uint256 currentTotal = totalAssets();
+        uint256 supply = totalSupply();
+
+        if (supply == 0) {
+            return _convertToAssets(shares, Math.Rounding.Ceil);
+        }
+
+        uint256 feeShares = _calculateFeeShares(currentTotal, supply);
+        uint256 adjustedSupply = supply + feeShares;
+
+        return shares.mulDiv(currentTotal, adjustedSupply, Math.Rounding.Ceil);
+    }
+
+    /**
+     * @notice Simulates the amount of assets that would be received for redeeming given shares
+     * @dev Overrides ERC4626 to account for pending fees that will be harvested during redemption.
+     *      This ensures the preview matches the actual execution in redeem().
+     *      Per ERC4626: MUST return "no more than" the exact assets that would be received.
+     * @param shares Amount of shares to redeem
+     * @return assets Amount of assets that would be received (accounting for pending fee dilution)
+     */
+    function previewRedeem(uint256 shares) public view virtual override returns (uint256 assets) {
+        uint256 currentTotal = totalAssets();
+        uint256 supply = totalSupply();
+
+        if (supply == 0 || currentTotal == 0) {
+            return _convertToAssets(shares, Math.Rounding.Floor);
+        }
+
+        // Simulate fee harvest to account for share dilution
+        uint256 feeShares = _calculateFeeShares(currentTotal, supply);
+        uint256 adjustedSupply = supply + feeShares;
+
+        // Convert using post-harvest supply
+        return shares.mulDiv(currentTotal, adjustedSupply, Math.Rounding.Floor);
     }
 
     /**

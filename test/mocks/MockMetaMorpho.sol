@@ -43,6 +43,19 @@ contract MockMetaMorpho is ERC4626 {
         return super.deposit(assets, receiver);
     }
 
+    function maxDeposit(address) public view override returns (uint256) {
+        uint256 currentAssets = totalAssets();
+        if (currentAssets >= liquidityCap) {
+            return 0;
+        }
+        return liquidityCap - currentAssets;
+    }
+
+    function maxMint(address) public view override returns (uint256) {
+        uint256 maxAssets = maxDeposit(address(0));
+        return convertToShares(maxAssets);
+    }
+
     function maxWithdraw(address owner) public view override returns (uint256) {
         uint256 baseMax = super.maxWithdraw(owner);
         return baseMax > liquidityCap ? liquidityCap : baseMax;

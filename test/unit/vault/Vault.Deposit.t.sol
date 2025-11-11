@@ -157,16 +157,62 @@ contract VaultDepositTest is VaultTestBase {
     }
 
     function test_Offset_ProtectsAgainstInflationAttack() public {
+        // Alice deposits tiny amount: 1000 assets
         vm.prank(alice);
         vault.deposit(1000, alice);
+        // Alice gets 1000 * 10^OFFSET shares (with OFFSET=6: 1,000,000,000 shares)
 
+        // Attacker donates 100M to inflate share price
         asset.mint(address(vault), 100_000e6);
+        // Now totalAssets = 1000 + 100_000e6 = 100,000,001,000
+        // totalSupply = 1,000,000,000 shares
+        // Share price = 100,000,001,000 / 1,000,000,000 = ~100 per share
+
+        // Before Bob deposits, calculate expected values:
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalSupplyBefore = vault.totalSupply();
+
+        // Expected: 100,000,001,000 assets, 1,000,000,000 shares
+        assertEq(totalAssetsBefore, 100_000_001_000);
+        assertEq(totalSupplyBefore, 1_000_000_000);
+
+        // Bob deposits 10M
+        // Harvest will occur:
+        // - lastTotalAssets was 1000 (from Alice's deposit)
+        // - currentTotal is 100,000,001,000
+        // - profit = 100,000,001,000 - 1000 = 100,000,000,000
+        uint256 profit = totalAssetsBefore - 1000;
+        assertEq(profit, 100_000_000_000);
+
+        // Fee = profit * 500 / 10000 = 100B * 0.05 = 5B
+        uint256 feeAmount = (profit * 500) / 10_000;
+        assertEq(feeAmount, 5_000_000_000);
+
+        // Fee shares = feeAmount * supply / (totalAssets - feeAmount)
+        // = 5B * 1B / (100B - 5B) = 5B * 1B / 95B
+        uint256 expectedFeeShares = (feeAmount * totalSupplyBefore) / (totalAssetsBefore - feeAmount);
+        // = 5_000_000_000 * 1_000_000_000 / 95_000_001_000
+        // = 5_000_000_000_000_000_000 / 95_000_001_000
+        // = 52_631_578 (floor division)
+
+        // After harvest:
+        // - totalSupply = 1B + 52.6M = 1,052,631,578
+        // - totalAssets = 100B (Bob's assets NOT yet transferred)
+        uint256 supplyAfterHarvest = totalSupplyBefore + expectedFeeShares;
+
+        // Bob's deposit: 10M assets
+        // Conversion happens BEFORE transferFrom (line 231 before line 234)
+        // ERC4626 _convertToShares with offset:
+        // shares = assets * (supply + 10^offset) / (totalAssets + 1)
+        // offset = 6, so 10^offset = 1,000,000
+
+        uint256 offset = 10 ** vault.OFFSET();
+        uint256 expectedBobShares = (10_000e6 * (supplyAfterHarvest + offset)) / (totalAssetsBefore + 1);
 
         vm.prank(bob);
-        uint256 victimShares = vault.deposit(10_000e6, bob);
+        uint256 bobShares = vault.deposit(10_000e6, bob);
 
-        uint256 expectedShares = vault.previewDeposit(10_000e6);
-        assertEq(victimShares, expectedShares);
+        assertEq(bobShares, expectedBobShares, "Bob should get exactly calculated shares");
     }
 
     /* ========== FUZZING TESTS ========== */

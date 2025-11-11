@@ -80,6 +80,17 @@ contract MorphoAdapter is Vault {
         assets = MORPHO_VAULT.redeem(morphoShares, receiver, address(this));
     }
 
+    function maxDeposit(address) public view override returns (uint256) {
+        if (paused()) return 0;
+        return MORPHO_VAULT.maxDeposit(address(this));
+    }
+
+    function maxMint(address) public view override returns (uint256) {
+        if (paused()) return 0;
+        uint256 maxAssets = MORPHO_VAULT.maxDeposit(address(this));
+        return _convertToShares(maxAssets, Math.Rounding.Floor);
+    }
+
     function maxWithdraw(address owner) public view override returns (uint256) {
         return Math.min(super.maxWithdraw(owner), MORPHO_VAULT.maxWithdraw(address(this)));
     }
