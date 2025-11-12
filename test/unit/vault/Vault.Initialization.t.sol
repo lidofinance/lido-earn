@@ -25,7 +25,7 @@ contract VaultInitializationTest is VaultTestBase {
     function test_InitialRolesAssigned() public view {
         bytes32 adminRole = vault.DEFAULT_ADMIN_ROLE();
         bytes32 pauserRole = vault.PAUSER_ROLE();
-        bytes32 feeManagerRole = vault.FEE_MANAGER_ROLE();
+        bytes32 feeManagerRole = vault.MANAGER_ROLE();
         bytes32 emergencyRole = vault.EMERGENCY_ROLE();
 
         assertTrue(vault.hasRole(adminRole, address(this)));

@@ -52,7 +52,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     /// @notice Role identifier for addresses that can update fee parameters
-    bytes32 public constant FEE_MANAGER_ROLE = keccak256("FEE_MANAGER_ROLE");
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     /// @notice Role identifier for addresses that can trigger emergency withdrawals
     bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
@@ -200,7 +200,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
-        _grantRole(FEE_MANAGER_ROLE, msg.sender);
+        _grantRole(MANAGER_ROLE, msg.sender);
         _grantRole(EMERGENCY_ROLE, msg.sender);
     }
 
@@ -460,10 +460,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
     /**
      * @notice Updates the reward fee percentage
-     * @dev Harvests pending fees before updating. Only callable by FEE_MANAGER_ROLE.
+     * @dev Harvests pending fees before updating. Only callable by MANAGER_ROLE.
      * @param newFee New fee in basis points (max 2000 = 20%)
      */
-    function setRewardFee(uint16 newFee) external onlyRole(FEE_MANAGER_ROLE) {
+    function setRewardFee(uint16 newFee) external onlyRole(MANAGER_ROLE) {
         if (newFee > MAX_REWARD_FEE_BASIS_POINTS) revert InvalidFee(newFee);
 
         _harvestFees();
@@ -476,10 +476,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
     /**
      * @notice Updates the treasury address
-     * @dev Only callable by FEE_MANAGER_ROLE.
+     * @dev Only callable by MANAGER_ROLE.
      * @param newTreasury New treasury address
      */
-    function setTreasury(address newTreasury) external onlyRole(FEE_MANAGER_ROLE) {
+    function setTreasury(address newTreasury) external onlyRole(MANAGER_ROLE) {
         if (newTreasury == address(0)) revert ZeroAddress();
 
         address oldTreasury = TREASURY;

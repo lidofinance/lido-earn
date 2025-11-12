@@ -49,7 +49,7 @@ contract VaultConfigTest is VaultTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.FEE_MANAGER_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.MANAGER_ROLE()
             )
         );
         vm.prank(alice);
@@ -89,7 +89,7 @@ contract VaultConfigTest is VaultTestBase {
 
     function test_SetRewardFee_WithFeeManagerRole() public {
         address feeManager = makeAddr("feeManager");
-        vault.grantRole(vault.FEE_MANAGER_ROLE(), feeManager);
+        vault.grantRole(vault.MANAGER_ROLE(), feeManager);
 
         uint16 newFee = 1500;
 
@@ -150,7 +150,7 @@ contract VaultConfigTest is VaultTestBase {
         address newTreasury = makeAddr("newTreasury");
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.FEE_MANAGER_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.MANAGER_ROLE()
             )
         );
         vm.prank(alice);

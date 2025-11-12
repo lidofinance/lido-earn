@@ -159,7 +159,7 @@
 |-----------|---------------|------------|
 | test_AdminRole_DefaultAdmin | Admin role assignment | Deployer has DEFAULT_ADMIN_ROLE |
 | test_PauserRole_GrantAndRevoke | PAUSER_ROLE management | Admin can grant/revoke, status changes |
-| test_FeeManagerRole_GrantAndRevoke | FEE_MANAGER_ROLE management | Admin can grant/revoke |
+| test_FeeManagerRole_GrantAndRevoke | MANAGER_ROLE management | Admin can grant/revoke |
 | test_EmergencyRole_GrantAndRevoke | EMERGENCY_ROLE management | Admin can grant/revoke |
 | test_AccessControl_RevertIf_NonAdminGrantsRole | Non-admin grant attempt | Reverts with AccessControlUnauthorizedAccount |
 | test_AccessControl_RevertIf_NonAdminRevokesRole | Non-admin revoke attempt | Reverts with AccessControlUnauthorizedAccount |
@@ -225,13 +225,13 @@
 | test_SetRewardFee_RevertIf_NotFeeManager | Fee manager authorization | Reverts with AccessControlUnauthorizedAccount |
 | test_SetRewardFee_HarvestsFeesBeforeChange | Pre-change harvest | Pending fees harvested at old rate |
 | test_SetRewardFee_UpdatesLastTotalAssets | State update | lastTotalAssets = totalAssets after update |
-| test_SetRewardFee_WithFeeManagerRole | FEE_MANAGER_ROLE update | Role holder can update fee |
+| test_SetRewardFee_WithFeeManagerRole | MANAGER_ROLE update | Role holder can update fee |
 | test_SetRewardFee_MultipleChanges | Sequential changes | Each change succeeds, events emitted |
 | testFuzz_SetRewardFee_WithinBounds | Fuzz valid fees | Any value 0-MAX_REWARD_FEE accepted |
 | test_SetTreasury_Basic | Treasury update | DEFAULT_ADMIN_ROLE can update treasury, event emitted |
 | test_SetTreasury_RevertIf_ZeroAddress | Input validation | Reverts with ZeroAddress for zero treasury |
 | test_SetTreasury_RevertIf_SameAddress | No-op prevention | Reverts with InvalidTreasuryAddress if address is unchanged |
-| test_SetTreasury_RevertIf_NotFeeManager | Access control | Only FEE_MANAGER_ROLE can update treasury |
+| test_SetTreasury_RevertIf_NotFeeManager | Access control | Only MANAGER_ROLE can update treasury |
 | test_SetTreasury_DoesNotTransferExistingShares | Fee accounting | Legacy treasury shares remain with old address, future fees go to new |
 
 ---

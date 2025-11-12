@@ -87,7 +87,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
 
     function test_SetRewardFee_WithFeeManagerRole() public {
         address feeManager = makeAddr("feeManager");
-        vault.grantRole(vault.FEE_MANAGER_ROLE(), feeManager);
+        vault.grantRole(vault.MANAGER_ROLE(), feeManager);
 
         uint16 newFee = 1500;
 

@@ -26,7 +26,7 @@ contract VaultAccessControlTest is VaultTestBase {
 
     function test_FeeManagerRole_GrantAndRevoke() public {
         address feeManager = makeAddr("feeManager");
-        bytes32 feeManagerRole = vault.FEE_MANAGER_ROLE();
+        bytes32 feeManagerRole = vault.MANAGER_ROLE();
 
         assertFalse(vault.hasRole(feeManagerRole, feeManager));
 
@@ -133,7 +133,7 @@ contract VaultAccessControlTest is VaultTestBase {
     function test_AccessControl_DeployerGetsAllRoles() public view {
         bytes32 adminRole = vault.DEFAULT_ADMIN_ROLE();
         bytes32 pauserRole = vault.PAUSER_ROLE();
-        bytes32 feeManagerRole = vault.FEE_MANAGER_ROLE();
+        bytes32 feeManagerRole = vault.MANAGER_ROLE();
         bytes32 emergencyRole = vault.EMERGENCY_ROLE();
 
         assertTrue(vault.hasRole(adminRole, address(this)));

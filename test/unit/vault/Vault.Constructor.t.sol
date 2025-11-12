@@ -72,7 +72,7 @@ contract VaultConstructorTest is TestConfig {
 
         // Admin should also receive all other roles
         assertTrue(vault.hasRole(vault.PAUSER_ROLE(), admin), "Pauser role not granted");
-        assertTrue(vault.hasRole(vault.FEE_MANAGER_ROLE(), admin), "Fee manager role not granted");
+        assertTrue(vault.hasRole(vault.MANAGER_ROLE(), admin), "Manager role not granted");
         assertTrue(vault.hasRole(vault.EMERGENCY_ROLE(), admin), "Emergency role not granted");
     }
 
