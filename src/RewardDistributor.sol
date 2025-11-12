@@ -67,6 +67,7 @@ contract RewardDistributor is AccessControl {
             revert InvalidBasisPointsSum();
         }
 
+        _grantRole(DEFAULT_ADMIN_ROLE, _manager);
         _grantRole(MANAGER_ROLE, _manager);
     }
 

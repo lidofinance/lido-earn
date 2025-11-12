@@ -60,7 +60,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     /* ========== STATE VARIABLES ========== */
 
     /// @notice Address that receives performance fees
-    address public immutable TREASURY;
+    address public TREASURY;
 
     /// @notice Decimals offset for virtual shares/assets (inflation attack protection)
     uint8 public immutable OFFSET;
@@ -100,6 +100,11 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     /// @param oldFee Previous fee in basis points
     /// @param newFee New fee in basis points
     event RewardFeeUpdated(uint256 oldFee, uint256 newFee);
+
+    /// @notice Emitted when treasury address is updated
+    /// @param oldTreasury Previous treasury address
+    /// @param newTreasury New treasury address
+    event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
 
     /// @notice Emitted when emergency withdrawal is executed
     /// @param receiver Address that received the withdrawn assets
@@ -158,6 +163,9 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     /// @param requested Amount of shares requested to mint
     /// @param maximum Maximum amount of shares allowed to mint
     error ExceedsMaxMint(uint256 requested, uint256 maximum);
+
+    /// @notice Thrown when attempting to update treasury to the same address
+    error InvalidTreasuryAddress();
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -464,6 +472,21 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         rewardFee = newFee;
 
         emit RewardFeeUpdated(oldFee, newFee);
+    }
+
+    /**
+     * @notice Updates the treasury address
+     * @dev Only callable by FEE_MANAGER_ROLE.
+     * @param newTreasury New treasury address
+     */
+    function setTreasury(address newTreasury) external onlyRole(FEE_MANAGER_ROLE) {
+        if (newTreasury == address(0)) revert ZeroAddress();
+
+        address oldTreasury = TREASURY;
+        if (newTreasury == oldTreasury) revert InvalidTreasuryAddress();
+
+        TREASURY = newTreasury;
+        emit TreasuryUpdated(oldTreasury, newTreasury);
     }
 
     /* ========== INFLATION ATTACK PROTECTION ========== */

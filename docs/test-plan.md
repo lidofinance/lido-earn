@@ -228,6 +228,11 @@
 | test_SetRewardFee_WithFeeManagerRole | FEE_MANAGER_ROLE update | Role holder can update fee |
 | test_SetRewardFee_MultipleChanges | Sequential changes | Each change succeeds, events emitted |
 | testFuzz_SetRewardFee_WithinBounds | Fuzz valid fees | Any value 0-MAX_REWARD_FEE accepted |
+| test_SetTreasury_Basic | Treasury update | DEFAULT_ADMIN_ROLE can update treasury, event emitted |
+| test_SetTreasury_RevertIf_ZeroAddress | Input validation | Reverts with ZeroAddress for zero treasury |
+| test_SetTreasury_RevertIf_SameAddress | No-op prevention | Reverts with InvalidTreasuryAddress if address is unchanged |
+| test_SetTreasury_RevertIf_NotFeeManager | Access control | Only FEE_MANAGER_ROLE can update treasury |
+| test_SetTreasury_DoesNotTransferExistingShares | Fee accounting | Legacy treasury shares remain with old address, future fees go to new |
 
 ---
 

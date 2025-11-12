@@ -124,4 +124,57 @@ contract VaultConfigTest is VaultTestBase {
 
         assertEq(vault.rewardFee(), newFee);
     }
+
+    function test_SetTreasury_Basic() public {
+        address newTreasury = makeAddr("newTreasury");
+
+        vm.expectEmit(true, true, false, true);
+        emit Vault.TreasuryUpdated(treasury, newTreasury);
+
+        vault.setTreasury(newTreasury);
+
+        assertEq(vault.TREASURY(), newTreasury);
+    }
+
+    function test_SetTreasury_RevertIf_ZeroAddress() public {
+        vm.expectRevert(Vault.ZeroAddress.selector);
+        vault.setTreasury(address(0));
+    }
+
+    function test_SetTreasury_RevertIf_SameAddress() public {
+        vm.expectRevert(Vault.InvalidTreasuryAddress.selector);
+        vault.setTreasury(treasury);
+    }
+
+    function test_SetTreasury_RevertIf_NotFeeManager() public {
+        address newTreasury = makeAddr("newTreasury");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.FEE_MANAGER_ROLE()
+            )
+        );
+        vm.prank(alice);
+        vault.setTreasury(newTreasury);
+    }
+
+    function test_SetTreasury_DoesNotTransferExistingShares() public {
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        asset.mint(address(vault), 10_000e6);
+        vault.harvestFees();
+
+        uint256 oldTreasuryShares = vault.balanceOf(treasury);
+        assertGt(oldTreasuryShares, 0);
+
+        address newTreasury = makeAddr("newTreasury");
+        vault.setTreasury(newTreasury);
+
+        assertEq(vault.balanceOf(treasury), oldTreasuryShares);
+        assertEq(vault.balanceOf(newTreasury), 0);
+
+        asset.mint(address(vault), 5_000e6);
+        vault.harvestFees();
+        assertGt(vault.balanceOf(newTreasury), 0);
+    }
 }
