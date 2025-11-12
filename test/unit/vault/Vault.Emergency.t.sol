@@ -111,11 +111,16 @@ contract VaultEmergencyTest is VaultTestBase {
         vault.deposit(100_000e6, alice);
 
         vault.pause();
+        assertTrue(vault.paused());
 
         address receiver = makeAddr("receiver");
+        uint256 totalAssetsBefore = vault.totalAssets();
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
         vault.emergencyWithdraw(receiver);
+
+        assertEq(asset.balanceOf(receiver), totalAssetsBefore);
+        assertEq(vault.totalAssets(), 0);
+        assertTrue(vault.paused());
     }
 
     function test_EmergencyWithdraw_MultipleDepositors() public {

@@ -216,17 +216,16 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     {
         if (assetsToDeposit == 0) revert ZeroAmount();
         if (shareReceiver == address(0)) revert ZeroAddress();
-
-        uint256 maxAssets = maxDeposit(shareReceiver);
-        if (assetsToDeposit > maxAssets) {
-            revert ExceedsMaxDeposit(assetsToDeposit, maxAssets);
-        }
-
         if (totalSupply() == 0 && assetsToDeposit < MIN_FIRST_DEPOSIT) {
             revert FirstDepositTooSmall(MIN_FIRST_DEPOSIT, assetsToDeposit);
         }
 
         _harvestFees();
+
+        uint256 maxAssets = maxDeposit(shareReceiver);
+        if (assetsToDeposit > maxAssets) {
+            revert ExceedsMaxDeposit(assetsToDeposit, maxAssets);
+        }
 
         sharesMinted = _convertToShares(assetsToDeposit, Math.Rounding.Floor);
         if (sharesMinted == 0) revert ZeroAmount();
@@ -267,7 +266,6 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         assetsRequired = _convertToAssets(sharesToMint, Math.Rounding.Ceil);
         if (assetsRequired == 0) revert ZeroAmount();
 
-        // Check maxDeposit on the actual assets required (after harvest)
         uint256 maxAssets = maxDeposit(shareReceiver);
         if (assetsRequired > maxAssets) {
             revert ExceedsMaxDeposit(assetsRequired, maxAssets);
@@ -361,13 +359,11 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         }
 
         uint256 assetsToWithdraw = _convertToAssets(sharesToRedeem, Math.Rounding.Floor);
-
         assetsWithdrawn = _withdrawFromProtocol(assetsToWithdraw, assetReceiver);
 
         if (assetsWithdrawn == 0) revert ZeroAmount();
 
         _burn(shareOwner, sharesToRedeem);
-
         lastTotalAssets = totalAssets();
 
         emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsWithdrawn, sharesToRedeem);
@@ -516,7 +512,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      */
     function emergencyWithdraw(address receiver) external virtual onlyRole(EMERGENCY_ROLE) returns (uint256 amount) {
         if (receiver == address(0)) revert ZeroAddress();
-        _pause();
+        if (!paused()) _pause();
 
         amount = _emergencyWithdrawFromProtocol(receiver);
         lastTotalAssets = totalAssets();
@@ -563,12 +559,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint256 adjustedSupply = supply + feeShares;
         uint256 assets = shares.mulDiv(currentTotal, adjustedSupply, Math.Rounding.Floor);
 
-        // Subtract 1 wei to account for rounding asymmetry between preview and execution:
-        // 1. This function uses Floor rounding when converting shares to assets
-        // 2. withdraw() uses previewWithdraw() which applies Ceil rounding for shares calculation
-        // 3. ERC4626's _convertToAssets adds +1 to totalAssets for inflation protection
-        // 4. These differences can cause previewWithdraw to require 1 more share than we calculated
-        // The -1 buffer ensures withdraw(maxWithdraw(user)) never reverts with "InsufficientShares"
+        // Subtract 1 wei buffer to prevent rounding edge cases in withdraw(maxWithdraw(user))
         return assets > 0 ? assets - 1 : 0;
     }
 
@@ -632,11 +623,9 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
             return _convertToAssets(shares, Math.Rounding.Floor);
         }
 
-        // Simulate fee harvest to account for share dilution
         uint256 feeShares = _calculateFeeShares(currentTotal, supply);
         uint256 adjustedSupply = supply + feeShares;
 
-        // Convert using post-harvest supply
         return shares.mulDiv(currentTotal, adjustedSupply, Math.Rounding.Floor);
     }
 
@@ -656,13 +645,9 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
             return _convertToShares(assets, Math.Rounding.Ceil);
         }
 
-        // Simulate fee harvest to account for share dilution
         uint256 feeShares = _calculateFeeShares(currentTotal, supply);
         uint256 adjustedSupply = supply + feeShares;
 
-        // Use the same formula as OpenZeppelin's _convertToShares with OFFSET and +1
-        // Formula: assets * (supply + 10^OFFSET) / (totalAssets + 1)
-        // This matches the conversion used in withdraw() after fees are harvested
         shares = assets.mulDiv(adjustedSupply + 10 ** OFFSET, currentTotal + 1, Math.Rounding.Ceil);
     }
 

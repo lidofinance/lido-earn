@@ -366,25 +366,34 @@ contract VaultWithdrawTest is VaultTestBase {
     }
 
     function test_PreviewWithdraw_WithPendingFees() public {
-        // Alice deposits
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        // Simulate profit
-        uint256 profit = 10_000e6; // 10% profit
+        uint256 profit = 10_000e6;
         asset.mint(address(vault), profit);
 
-        // Preview withdraw before fees are harvested
         uint256 previewedShares = vault.previewWithdraw(50_000e6);
 
-        // Actual withdraw (this will harvest fees)
         vm.prank(alice);
         uint256 actualShares = vault.withdraw(50_000e6, alice, alice);
 
-        // Currently previewWithdraw doesn't account for pending fees,
-        // so it will underestimate the shares needed
-        // This test documents the current behavior - should be fixed
-        assertGe(actualShares, previewedShares, "Actual shares should be >= previewed shares");
+        assertEq(actualShares, previewedShares, "Preview should match actual shares burned");
+    }
+
+    function test_PreviewRedeem_WithPendingFees_Accurate() public {
+        vm.prank(alice);
+        vault.deposit(100_000e6, alice);
+
+        uint256 profit = 10_000e6;
+        asset.mint(address(vault), profit);
+
+        uint256 sharesToRedeem = vault.balanceOf(alice) / 2;
+        uint256 previewedAssets = vault.previewRedeem(sharesToRedeem);
+
+        vm.prank(alice);
+        uint256 actualAssets = vault.redeem(sharesToRedeem, alice, alice);
+
+        assertApproxEqAbs(actualAssets, previewedAssets, 2, "Preview should match actual assets received");
     }
 
     function test_MaxWithdraw() public {
@@ -489,87 +498,62 @@ contract VaultWithdrawTest is VaultTestBase {
 
     // Fuzz test for withdraw after deposit
     function testFuzz_Withdraw_Success(uint96 depositAmount, uint96 withdrawAmount) public {
-        // Bound depositAmount
         depositAmount = uint96(bound(depositAmount, 1000, type(uint96).max));
 
-        // Withdraw must be <= deposit
         vm.assume(withdrawAmount <= depositAmount);
         vm.assume(withdrawAmount > 0);
 
-        // Mint additional tokens to alice if needed
         if (depositAmount > INITIAL_BALANCE) {
             asset.mint(alice, depositAmount - INITIAL_BALANCE);
         }
 
-        // Deposit first
         vm.prank(alice);
         uint256 shares = vault.deposit(depositAmount, alice);
 
         uint256 aliceBalanceBefore = asset.balanceOf(alice);
         uint256 expectedShares = vault.previewWithdraw(withdrawAmount);
 
-        // Withdraw
         vm.prank(alice);
         uint256 sharesBurned = vault.withdraw(withdrawAmount, alice, alice);
 
         uint256 aliceBalanceAfter = asset.balanceOf(alice);
 
-        // Verify shares burned correctly
         assertEq(sharesBurned, expectedShares);
-
-        // Verify balance changed correctly
         assertEq(aliceBalanceAfter - aliceBalanceBefore, withdrawAmount);
-
-        // Verify remaining shares
         assertEq(vault.balanceOf(alice), shares - sharesBurned);
     }
 
-    // Fuzz test for redeem after deposit
     function testFuzz_Redeem_Success(uint96 depositAmount, uint96 sharesToRedeem) public {
-        // Bound depositAmount to ensure meaningful shares
         depositAmount = uint96(bound(depositAmount, 10_000e6, type(uint96).max));
 
-        // Mint additional tokens to alice if needed
         if (depositAmount > INITIAL_BALANCE) {
             asset.mint(alice, depositAmount - INITIAL_BALANCE);
         }
 
-        // Deposit first
         vm.prank(alice);
         uint256 shares = vault.deposit(depositAmount, alice);
 
-        // Shares to redeem must be at least 1% of shares to avoid zero asset rounding
         sharesToRedeem = uint96(bound(sharesToRedeem, shares / 100, shares));
 
         uint256 aliceBalanceBefore = asset.balanceOf(alice);
         uint256 expectedAssets = vault.previewRedeem(sharesToRedeem);
 
-        // Skip if redeem would result in 0 assets
         vm.assume(expectedAssets > 0);
 
-        // Redeem
         vm.prank(alice);
         uint256 assets = vault.redeem(sharesToRedeem, alice, alice);
 
         uint256 aliceBalanceAfter = asset.balanceOf(alice);
 
-        // Verify assets received correctly
         assertEq(assets, expectedAssets);
-
-        // Verify balance changed correctly
         assertEq(aliceBalanceAfter - aliceBalanceBefore, assets);
-
-        // Verify remaining shares
         assertEq(vault.balanceOf(alice), shares - sharesToRedeem);
     }
 
-    // Fuzz test for multiple users depositing and one withdrawing
     function testFuzz_Withdraw_WithMultipleUsers(uint96 deposit1, uint96 deposit2, uint96 withdraw1) public {
-        // Bound deposits
         deposit1 = uint96(bound(deposit1, 1000, type(uint96).max / 2));
         deposit2 = uint96(bound(deposit2, 1000, type(uint96).max / 2));
 
-        // Mint additional tokens if needed
         if (deposit1 > INITIAL_BALANCE) {
             asset.mint(alice, deposit1 - INITIAL_BALANCE);
         }
@@ -577,33 +561,25 @@ contract VaultWithdrawTest is VaultTestBase {
             asset.mint(bob, deposit2 - INITIAL_BALANCE);
         }
 
-        // Both users deposit
         vm.prank(alice);
         vault.deposit(deposit1, alice);
 
         vm.prank(bob);
         uint256 bobShares = vault.deposit(deposit2, bob);
 
-        // Alice withdraws part of her deposit
         vm.assume(withdraw1 <= deposit1);
         vm.assume(withdraw1 > 0);
 
         vm.prank(alice);
         vault.withdraw(withdraw1, alice, alice);
 
-        // Verify Bob's shares weren't affected
         assertEq(vault.balanceOf(bob), bobShares);
-
-        // Verify total assets decreased by withdraw amount
         assertEq(vault.totalAssets(), deposit1 + deposit2 - withdraw1);
     }
 
-    // Fuzz test that rounding favors the vault on withdraw
     function testFuzz_Withdraw_RoundingFavorsVault(uint96 depositAmount, uint96 withdrawAmount) public {
-        // Bound depositAmount
         depositAmount = uint96(bound(depositAmount, 10_000e6, type(uint96).max / 2));
 
-        // Mint additional tokens if needed
         if (depositAmount > INITIAL_BALANCE) {
             asset.mint(alice, depositAmount - INITIAL_BALANCE);
         }
@@ -611,7 +587,6 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         vault.deposit(depositAmount, alice);
 
-        // Withdraw must be less than deposit
         withdrawAmount = uint96(bound(withdrawAmount, 100, depositAmount - 100));
 
         uint256 previewedShares = vault.previewWithdraw(withdrawAmount);
@@ -619,19 +594,13 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         uint256 actualShares = vault.withdraw(withdrawAmount, alice, alice);
 
-        // User should burn more than or equal to previewed shares (rounding favors vault)
         assertGe(actualShares, previewedShares);
-
-        // Should be very close (allow small rounding difference)
         assertApproxEqAbs(actualShares, previewedShares, 2);
     }
 
-    // Fuzz test that rounding favors the vault on redeem
     function testFuzz_Redeem_RoundingFavorsVault(uint96 depositAmount, uint96 sharesToRedeem) public {
-        // Bound depositAmount
         depositAmount = uint96(bound(depositAmount, 10_000e6, type(uint96).max / 2));
 
-        // Mint additional tokens if needed
         if (depositAmount > INITIAL_BALANCE) {
             asset.mint(alice, depositAmount - INITIAL_BALANCE);
         }
@@ -639,7 +608,6 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         uint256 shares = vault.deposit(depositAmount, alice);
 
-        // Shares to redeem must be meaningful portion of shares
         sharesToRedeem = uint96(bound(sharesToRedeem, shares / 1000, shares - (shares / 1000)));
 
         uint256 previewedAssets = vault.previewRedeem(sharesToRedeem);
@@ -647,10 +615,7 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         uint256 actualAssets = vault.redeem(sharesToRedeem, alice, alice);
 
-        // User should receive less than or equal to previewed assets (rounding favors vault)
         assertLe(actualAssets, previewedAssets);
-
-        // Should be very close (allow small rounding difference)
         assertApproxEqAbs(actualAssets, previewedAssets, 2);
     }
 }
