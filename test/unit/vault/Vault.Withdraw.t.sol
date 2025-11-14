@@ -447,8 +447,7 @@ contract VaultWithdrawTest is VaultTestBase {
         assertEq(aliceAssetsAfter - aliceAssetsBefore, maxWithdrawValue);
         assertEq(aliceSharesBefore - aliceSharesAfter, sharesBurned);
 
-        uint256 maxRemainingShares = 10 ** OFFSET;
-        assertLe(aliceSharesAfter, maxRemainingShares);
+        assertApproxEqAbs(vault.maxWithdraw(alice), 1, 2);
 
         if (aliceSharesAfter > 0) {
             uint256 remainingAssetValue = vault.convertToAssets(aliceSharesAfter);

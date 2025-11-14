@@ -112,7 +112,7 @@
 | test_PreviewRedeem_WithPendingFees_Accurate | Preview with fees | Matches actual assets (±2 wei) |
 | test_MaxWithdraw | maxWithdraw calculation | Returns withdrawable amount |
 | test_MaxWithdraw_WithPendingFees_ShouldNotRevert | maxWithdraw with fees | No revert, amount withdrawable |
-| testFuzz_MaxWithdraw_IsActuallyWithdrawable | Fuzz maxWithdraw | maxWithdraw always withdrawable, ≤10^OFFSET dust |
+| testFuzz_MaxWithdraw_IsActuallyWithdrawable | Fuzz maxWithdraw | maxWithdraw always withdrawable, 1 wei dust |
 | test_DepositWithdraw_RoundingDoesNotCauseLoss | Round-trip preservation | Full balance recovered |
 | test_MultipleDepositsWithdraws_MaintainsAccounting | Multi-operation accounting | Share-asset conversions accurate |
 | test_TotalAssets | totalAssets accuracy | totalAssets = deposited amount |

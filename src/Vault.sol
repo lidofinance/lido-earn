@@ -485,6 +485,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         address oldTreasury = TREASURY;
         if (newTreasury == oldTreasury) revert InvalidTreasuryAddress();
 
+        _harvestFees();
         TREASURY = newTreasury;
         emit TreasuryUpdated(oldTreasury, newTreasury);
     }
@@ -564,8 +565,17 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @notice Returns maximum assets that can be withdrawn by owner
      * @dev Overrides ERC4626 to account for pending fees that will be harvested during withdrawal.
      *      Without this adjustment, maxWithdraw could return a value that causes withdraw to revert.
+     *
+     *      This function computes the inverse of _convertToShares to ensure withdraw(maxWithdraw(owner))
+     *      never reverts due to insufficient shares.
+     *
+     *      Formula derivation:
+     *      withdraw() uses: sharesBurned = assets * (supply + 10^offset) / (total + 1) [Ceil]
+     *      We need: sharesBurned ≤ shares
+     *      Solving for max assets: assets = shares * (total + 1) / (supply + 10^offset) [Floor]
+     *
      * @param owner Address to check maximum withdrawal for
-     * @return Maximum assets withdrawable accounting for pending fee dilution
+     * @return Maximum assets withdrawable accounting for pending fee dilution and offset protection
      */
     function maxWithdraw(address owner) public view virtual override returns (uint256) {
         uint256 shares = balanceOf(owner);
@@ -578,9 +588,12 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         uint256 feeShares = _calculateFeeShares(currentTotal, supply);
         uint256 adjustedSupply = supply + feeShares;
-        uint256 assets = shares.mulDiv(currentTotal, adjustedSupply, Math.Rounding.Floor);
 
-        // Subtract 1 wei buffer to prevent rounding edge cases in withdraw(maxWithdraw(user))
+        // Use the inverse formula of _convertToShares to ensure withdraw never reverts
+        // This accounts for the decimals offset used in inflation attack protection
+        uint256 assets = shares.mulDiv(currentTotal + 1, adjustedSupply + 10 ** _decimalsOffset(), Math.Rounding.Floor);
+
+        // Subtract 1 wei buffer for additional safety margin
         return assets > 0 ? assets - 1 : 0;
     }
 
@@ -654,6 +667,16 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @notice Simulates the amount of shares that would be burned to withdraw given assets
      * @dev Overrides ERC4626 to account for pending fees that will be harvested during withdrawal.
      *      This ensures the preview matches the actual execution in withdraw().
+     *
+     *      The formula replicates OpenZeppelin's _convertToShares() behavior after fee harvest:
+     *      - adjustedSupply = supply + feeShares (simulates the supply after _harvestFees())
+     *      - The "+ 10 ** OFFSET" term is part of ERC4626 inflation attack protection
+     *      - The "+ 1" on totalAssets prevents division by zero in edge cases
+     *
+     *      Formula: shares = assets * (adjustedSupply + 10^offset) / (totalAssets + 1)
+     *
+     *      This matches what withdraw() does: _harvestFees() then _convertToShares(assets, Ceil)
+     *
      *      Per ERC4626: MUST return "no fewer than" the actual shares that would be burned.
      * @param assets Amount of assets to withdraw
      * @return shares Amount of shares that would be burned (accounting for pending fee dilution)
