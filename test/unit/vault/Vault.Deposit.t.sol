@@ -20,6 +20,20 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(vault.totalAssets(), depositAmount);
     }
 
+    function testFuzz_Deposit_Basic(uint96 depositAmount) public {
+        depositAmount = uint96(bound(depositAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2));
+        uint256 expectedShares = depositAmount * 10 ** vault.OFFSET();
+        asset.mint(alice, depositAmount);
+
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        assertEq(shares, expectedShares);
+        assertEq(vault.balanceOf(alice), shares);
+        assertEq(vault.totalSupply(), shares);
+        assertEq(vault.totalAssets(), depositAmount);
+    }
+
     function test_Deposit_EmitsEvent() public {
         uint256 depositAmount = 10_000e6;
         uint256 expectedShares = vault.previewDeposit(depositAmount);
@@ -45,6 +59,27 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(bobShares, expectedBobShares);
         assertEq(vault.totalSupply(), aliceShares + bobShares);
         assertEq(vault.totalAssets(), 80_000e6);
+    }
+
+    function testFuzz_Deposit_MultipleUsers(uint96 aliceAmount, uint96 bobAmount) public {
+        aliceAmount = uint96(bound(aliceAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2));
+        bobAmount = uint96(bound(bobAmount, 1, type(uint96).max / 2));
+        asset.mint(alice, aliceAmount);
+        asset.mint(bob, bobAmount);
+
+        vm.prank(alice);
+        uint256 aliceShares = vault.deposit(aliceAmount, alice);
+
+        vm.prank(bob);
+        uint256 bobShares = vault.deposit(bobAmount, bob);
+
+        uint256 expectedAliceShares = aliceAmount * 10 ** vault.OFFSET();
+        uint256 expectedBobShares = bobAmount * 10 ** vault.OFFSET();
+
+        assertEq(aliceShares, expectedAliceShares);
+        assertEq(bobShares, expectedBobShares);
+        assertEq(vault.totalSupply(), aliceShares + bobShares);
+        assertApproxEqAbs(vault.totalAssets(), aliceAmount + bobAmount, 2);
     }
 
     function test_Deposit_RevertIf_ZeroAmount() public {
@@ -108,6 +143,20 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(assets, expectedAssets);
         assertEq(vault.balanceOf(alice), sharesToMint);
         assertEq(vault.totalAssets(), assets);
+    }
+
+    function testFuzz_Mint_Basic(uint96 sharesToMint) public {
+        uint256 minShares = vault.MIN_FIRST_DEPOSIT() * 10 ** vault.OFFSET();
+        sharesToMint = uint96(bound(sharesToMint, minShares, type(uint96).max / 2));
+        uint256 expectedAssets = vault.previewMint(sharesToMint);
+        asset.mint(alice, expectedAssets);
+
+        vm.prank(alice);
+        uint256 assets = vault.mint(sharesToMint, alice);
+
+        assertEq(assets, expectedAssets);
+        assertEq(vault.balanceOf(alice), sharesToMint);
+        assertApproxEqAbs(vault.totalAssets(), assets, 1);
     }
 
     function test_Mint_RevertIf_ZeroShares() public {

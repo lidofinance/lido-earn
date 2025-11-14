@@ -225,7 +225,7 @@ contract VaultConstructorTest is TestConfig {
     /// @notice Fuzz test: constructor should revert for invalid reward fee (> 2000)
     function testFuzz_Constructor_InvalidRewardFee(uint16 rewardFee) public {
         // Bound reward fee to invalid range [2001, type(uint16).max]
-        vm.assume(rewardFee > 2000);
+        rewardFee = uint16(bound(uint256(rewardFee), 2001, type(uint16).max));
 
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
@@ -236,8 +236,8 @@ contract VaultConstructorTest is TestConfig {
 
     /// @notice Fuzz test: constructor should revert for invalid offset (> 23)
     function testFuzz_Constructor_InvalidOffset(uint8 offset) public {
-        // Assume offset is in invalid range [24, type(uint8).max]
-        vm.assume(offset > 23);
+        // Bound offset to invalid range [24, type(uint8).max]
+        offset = uint8(bound(uint256(offset), 24, type(uint8).max));
 
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
 

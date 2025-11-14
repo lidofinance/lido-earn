@@ -47,13 +47,15 @@
 
 ---
 
-### Vault.Deposit.t.sol (24 tests)
+### Vault.Deposit.t.sol (27 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
 | test_Deposit_Basic | Basic deposit | Shares minted = assets * 10^OFFSET, balances updated |
+| testFuzz_Deposit_Basic | Fuzz basic deposit | Shares minted correctly for any valid deposit amount |
 | test_Deposit_EmitsEvent | Event emission | Deposited event with correct params |
 | test_Deposit_MultipleUsers | Multi-user deposits | Each user gets correct shares, totals updated |
+| testFuzz_Deposit_MultipleUsers | Fuzz multi-user deposits | Two users get correct shares for any valid amounts |
 | test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with ZeroAmount |
 | test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
 | test_Deposit_RevertIf_Paused | Pause enforcement | Reverts with EnforcedPause |
@@ -61,6 +63,7 @@
 | test_FirstDeposit_SuccessIf_MinimumMet | First deposit success | MIN_FIRST_DEPOSIT accepted, shares minted |
 | test_SecondDeposit_CanBeSmall | Subsequent deposits | Allows deposits of 1 wei after first |
 | test_Mint_Basic | Basic mint | Exact shares minted, assets match preview |
+| testFuzz_Mint_Basic | Fuzz basic mint | Assets match preview for any valid share amount |
 | test_Mint_RevertIf_ZeroShares | Zero shares validation | Reverts with ZeroAmount |
 | test_Mint_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
 | test_Mint_RevertIf_FirstDepositTooSmall | First mint minimum | Reverts if assets < MIN_FIRST_DEPOSIT |
@@ -194,23 +197,27 @@
 
 ---
 
-### Vault.Emergency.t.sol (13 tests)
+### Vault.Emergency.t.sol (18 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
 | test_EmergencyWithdraw_Basic | Basic emergency withdrawal | All assets transferred, totalAssets = 0 |
+| testFuzz_EmergencyWithdraw_Basic | Fuzz basic emergency withdrawal | Works correctly for any valid deposit amount |
 | test_EmergencyWithdraw_RevertIf_NotEmergencyRole | Emergency authorization | Reverts with AccessControlUnauthorizedAccount |
 | test_EmergencyWithdraw_WithEmergencyRole | EMERGENCY_ROLE withdrawal | Role holder can trigger withdrawal |
 | test_EmergencyWithdraw_WithZeroAssets | Empty vault emergency | Succeeds, receiver gets 0 |
 | test_EmergencyWithdraw_RevertIf_ReceiverZeroAddress | Zero receiver validation | Reverts with ZeroAddress |
 | test_EmergencyWithdraw_DoesNotAffectShares | User shares after emergency | totalSupply and balances unchanged |
+| testFuzz_EmergencyWithdraw_DoesNotAffectShares | Fuzz shares preservation | User shares remain for any deposit amount |
 | test_EmergencyWithdraw_PausesVault | Vault state after emergency | Vault becomes paused |
 | test_EmergencyWithdraw_EmitsEventAndTransfersProfit | Event and profit transfer | EmergencyWithdrawal event, all assets transferred |
+| testFuzz_EmergencyWithdraw_EmitsEventAndTransfersProfit | Fuzz event and profit | Correct event and transfer for any deposit/profit amounts |
 | test_EmergencyWithdraw_WhenAlreadyPaused | Emergency when paused | Succeeds, assets transferred |
 | test_EmergencyWithdraw_MultipleDepositors | Multi-depositor emergency | All depositors' assets recovered |
+| testFuzz_EmergencyWithdraw_MultipleDepositors | Fuzz multi-depositor emergency | Correct recovery for any deposit amounts |
 | test_EmergencyWithdraw_UsersCanWithdrawAfter | User withdrawals after emergency | Users retain shares, can redeem if assets restored |
 | test_EmergencyWithdraw_BlocksNewDeposits | Deposits after emergency | Deposit reverts with EnforcedPause |
-| testFuzz_EmergencyWithdraw_ResetsLastTotalAssets | lastTotalAssets reset | lastTotalAssets = 0 after emergency |
+| testFuzz_EmergencyWithdraw_ResetsLastTotalAssets | Fuzz lastTotalAssets reset | lastTotalAssets = 0 after emergency for any amount |
 
 ---
 
@@ -528,6 +535,12 @@ forge test --gas-report
 - Rounding always favors vault
 - Max functions respect protocol limits
 
+**Fuzz Testing:**
+- All fuzz tests use `bound()` instead of `vm.assume()` for better input distribution
+- Upper bounds set to `type(uint96).max / 2` or `/4` to prevent overflow in multi-parameter tests
+- Covers deposit, mint, withdraw, redeem, emergency, and fee operations with randomized inputs
+- Tests validate correctness across wide range of values (MIN_FIRST_DEPOSIT to max safe uint96)
+
 **Integration Testing:**
 - Morpho vault interaction, capacity limit respect
 - Fee harvesting with external profit, emergency scenarios
@@ -539,6 +552,6 @@ forge test --gas-report
 
 ---
 
-*Generated: 2025-01-12*
-*Total Tests: ~301*
+*Generated: 2025-01-13*
+*Total Tests: 328*
 *Coverage: Comprehensive across all contract functionality*

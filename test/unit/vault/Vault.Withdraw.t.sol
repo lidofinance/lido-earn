@@ -499,9 +499,7 @@ contract VaultWithdrawTest is VaultTestBase {
     // Fuzz test for withdraw after deposit
     function testFuzz_Withdraw_Success(uint96 depositAmount, uint96 withdrawAmount) public {
         depositAmount = uint96(bound(depositAmount, 1000, type(uint96).max));
-
-        vm.assume(withdrawAmount <= depositAmount);
-        vm.assume(withdrawAmount > 0);
+        withdrawAmount = uint96(bound(withdrawAmount, 1, depositAmount));
 
         if (depositAmount > INITIAL_BALANCE) {
             asset.mint(alice, depositAmount - INITIAL_BALANCE);
@@ -538,7 +536,8 @@ contract VaultWithdrawTest is VaultTestBase {
         uint256 aliceBalanceBefore = asset.balanceOf(alice);
         uint256 expectedAssets = vault.previewRedeem(sharesToRedeem);
 
-        vm.assume(expectedAssets > 0);
+        // Если expectedAssets == 0 из-за округления, пропускаем тест
+        if (expectedAssets == 0) return;
 
         vm.prank(alice);
         uint256 assets = vault.redeem(sharesToRedeem, alice, alice);
@@ -567,8 +566,7 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(bob);
         uint256 bobShares = vault.deposit(deposit2, bob);
 
-        vm.assume(withdraw1 <= deposit1);
-        vm.assume(withdraw1 > 0);
+        withdraw1 = uint96(bound(withdraw1, 1, deposit1));
 
         vm.prank(alice);
         vault.withdraw(withdraw1, alice, alice);

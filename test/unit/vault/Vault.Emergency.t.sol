@@ -173,7 +173,7 @@ contract VaultEmergencyTest is VaultTestBase {
     }
 
     function testFuzz_EmergencyWithdraw_ResetsLastTotalAssets(uint96 amount) public {
-        vm.assume(amount > vault.MIN_FIRST_DEPOSIT());
+        amount = uint96(bound(uint256(amount), vault.MIN_FIRST_DEPOSIT() + 1, type(uint96).max / 2));
         asset.mint(alice, amount);
 
         vm.prank(alice);
@@ -187,5 +187,83 @@ contract VaultEmergencyTest is VaultTestBase {
 
         assertEq(vault.totalAssets(), 0);
         assertEq(vault.lastTotalAssets(), 0);
+    }
+
+    function testFuzz_EmergencyWithdraw_Basic(uint96 depositAmount) public {
+        depositAmount = uint96(bound(depositAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2));
+        asset.mint(alice, depositAmount);
+
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        address receiver = makeAddr("receiver");
+        uint256 vaultAssets = vault.totalAssets();
+
+        vault.emergencyWithdraw(receiver);
+
+        uint256 receiverBalance = asset.balanceOf(receiver);
+
+        assertEq(receiverBalance, vaultAssets);
+        assertEq(vault.totalAssets(), 0);
+    }
+
+    function testFuzz_EmergencyWithdraw_DoesNotAffectShares(uint96 depositAmount) public {
+        depositAmount = uint96(bound(depositAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2));
+        asset.mint(alice, depositAmount);
+
+        vm.prank(alice);
+        uint256 aliceShares = vault.deposit(depositAmount, alice);
+
+        address receiver = makeAddr("receiver");
+
+        vault.emergencyWithdraw(receiver);
+
+        assertEq(vault.balanceOf(alice), aliceShares);
+        assertEq(vault.totalSupply(), aliceShares);
+    }
+
+    function testFuzz_EmergencyWithdraw_EmitsEventAndTransfersProfit(uint96 depositAmount, uint96 profitAmount)
+        public
+    {
+        depositAmount = uint96(bound(depositAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 4));
+        profitAmount = uint96(bound(profitAmount, 1, type(uint96).max / 4));
+        asset.mint(alice, depositAmount);
+
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        // simulate protocol profit
+        asset.mint(address(vault), profitAmount);
+
+        address receiver = makeAddr("receiver");
+        uint256 totalBefore = vault.totalAssets();
+
+        vm.expectEmit(true, false, false, true);
+        emit Vault.EmergencyWithdrawal(receiver, totalBefore);
+
+        vault.emergencyWithdraw(receiver);
+
+        assertEq(asset.balanceOf(receiver), totalBefore);
+        assertEq(vault.totalAssets(), 0);
+    }
+
+    function testFuzz_EmergencyWithdraw_MultipleDepositors(uint96 aliceAmount, uint96 bobAmount) public {
+        aliceAmount = uint96(bound(aliceAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 4));
+        bobAmount = uint96(bound(bobAmount, 1, type(uint96).max / 4));
+        asset.mint(alice, aliceAmount);
+        asset.mint(bob, bobAmount);
+
+        vm.prank(alice);
+        vault.deposit(aliceAmount, alice);
+
+        vm.prank(bob);
+        vault.deposit(bobAmount, bob);
+
+        address receiver = makeAddr("receiver");
+        uint256 totalAssets = vault.totalAssets();
+
+        vault.emergencyWithdraw(receiver);
+
+        assertEq(asset.balanceOf(receiver), totalAssets);
     }
 }

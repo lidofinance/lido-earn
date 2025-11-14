@@ -330,7 +330,7 @@ contract VaultERC4626ComplianceTest is VaultTestBase {
     /// @notice Fuzz test: maxDeposit should always return max uint256 for any valid user
     /// @dev Note: ERC4626 standard doesn't require maxDeposit to consider pause state
     function testFuzz_MaxDeposit_AlwaysMaxUint256(address user) public {
-        // Filter invalid addresses
+        // Filter invalid addresses (vm.assume is appropriate for address filtering, not bound)
         vm.assume(user != address(0));
 
         // MaxDeposit should be max uint256 regardless of pause state

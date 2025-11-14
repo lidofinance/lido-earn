@@ -118,7 +118,7 @@ contract VaultConfigTest is VaultTestBase {
     }
 
     function testFuzz_SetRewardFee_WithinBounds(uint16 newFee) public {
-        vm.assume(newFee <= vault.MAX_REWARD_FEE_BASIS_POINTS());
+        newFee = uint16(bound(uint256(newFee), 0, vault.MAX_REWARD_FEE_BASIS_POINTS()));
 
         vault.setRewardFee(newFee);
 
