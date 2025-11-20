@@ -4,10 +4,10 @@ pragma solidity 0.8.30;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
 import {RewardDistributor} from "src/RewardDistributor.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
-import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
+import {MockERC4626Vault} from "test/mocks/MockERC4626Vault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract DemoDeploy is Script {
@@ -22,9 +22,9 @@ contract DemoDeploy is Script {
     uint8 constant DECIMALS_OFFSET = 6;
 
     MockERC20 public token;
-    MockMetaMorpho public morphoVault;
+    MockERC4626Vault public targetVault;
     RewardDistributor public rewardDistributor;
-    MorphoAdapter public vault;
+    ERC4626Adapter public vault;
 
     function setUp() public {}
 
@@ -41,10 +41,10 @@ contract DemoDeploy is Script {
         console.log("   MockERC20 deployed at:", address(token));
         console.log("");
 
-        // 2. Deploy Mock Morpho Vault
-        console.log("2. Deploying MockMetaMorpho...");
-        morphoVault = new MockMetaMorpho(IERC20(address(token)), "Mock Morpho USDC Vault", "mmUSDC", DECIMALS_OFFSET);
-        console.log("   MockMetaMorpho deployed at:", address(morphoVault));
+        // 2. Deploy Mock ERC4626 Vault
+        console.log("2. Deploying MockERC4626Vault...");
+        targetVault = new MockERC4626Vault(IERC20(address(token)), "Mock Yield Vault", "yUSDC", DECIMALS_OFFSET);
+        console.log("   MockERC4626Vault deployed at:", address(targetVault));
         console.log("");
 
         // 3. Deploy RewardDistributor
@@ -63,18 +63,18 @@ contract DemoDeploy is Script {
         console.log("   Recipient 2 (95%):", RECIPIENT_2);
         console.log("");
 
-        // 4. Deploy MorphoVault
-        console.log("4. Deploying MorphoVault...");
-        vault = new MorphoAdapter(
+        // 4. Deploy ERC4626Adapter
+        console.log("4. Deploying ERC4626Adapter...");
+        vault = new ERC4626Adapter(
             address(token),
-            address(morphoVault),
+            address(targetVault),
             address(rewardDistributor),
             REWARD_FEE,
             DECIMALS_OFFSET,
-            "Demo Morpho Vault",
-            "dmvUSDC"
+            "Demo ERC4626 Vault",
+            "d4626"
         );
-        console.log("   MorphoVault deployed at:", address(vault));
+        console.log("   Adapter deployed at:", address(vault));
         console.log("");
 
         // 5. Mint initial tokens to admin for testing
@@ -89,9 +89,9 @@ contract DemoDeploy is Script {
         // Print summary
         console.log("=== DEPLOYMENT SUMMARY ===");
         console.log("MockERC20 (dUSDC):", address(token));
-        console.log("MockMetaMorpho:", address(morphoVault));
+        console.log("MockERC4626Vault:", address(targetVault));
         console.log("RewardDistributor:", address(rewardDistributor));
-        console.log("MorphoVault:", address(vault));
+        console.log("ERC4626Adapter:", address(vault));
         console.log("");
         console.log("Admin:", ADMIN);
         console.log("Initial Balance:", initialMint / 1e6, "dUSDC");

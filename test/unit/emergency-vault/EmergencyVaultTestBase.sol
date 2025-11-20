@@ -2,20 +2,20 @@
 pragma solidity 0.8.30;
 
 import "forge-std/Test.sol";
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
-import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
+import {MockERC4626Vault} from "test/mocks/MockERC4626Vault.sol";
 import {TestConfig} from "test/utils/TestConfig.sol";
 
 /**
  * @title EmergencyVaultTestBase
  * @notice Base test contract for EmergencyVault functionality
- * @dev Uses MorphoAdapter as concrete implementation for testing
+ * @dev Uses ERC4626Adapter as concrete implementation for testing
  */
 abstract contract EmergencyVaultTestBase is Test, TestConfig {
-    MorphoAdapter public vault;
+    ERC4626Adapter public vault;
     MockERC20 public usdc;
-    MockMetaMorpho public morpho;
+    MockERC4626Vault public targetVault;
 
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
@@ -29,9 +29,10 @@ abstract contract EmergencyVaultTestBase is Test, TestConfig {
         uint8 decimals = _assetDecimals();
 
         usdc = new MockERC20("USD Coin", "USDC", decimals);
-        morpho = new MockMetaMorpho(usdc, "Morpho Vault", "mUSDC", OFFSET);
+        targetVault = new MockERC4626Vault(usdc, "Mock Yield Vault", "yUSDC", OFFSET);
 
-        vault = new MorphoAdapter(address(usdc), address(morpho), treasury, FEE_BPS, OFFSET, "Lido Earn Vault", "LEV");
+        vault =
+            new ERC4626Adapter(address(usdc), address(targetVault), treasury, FEE_BPS, OFFSET, "Lido Earn Vault", "LEV");
 
         uint256 initialBalance = scaleAmount(INITIAL_BALANCE);
         usdc.mint(alice, initialBalance);

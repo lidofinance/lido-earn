@@ -6,10 +6,7 @@
     }
   },
   "lib/metamorpho": {
-    "tag": {
-      "name": "v1.0.0",
-      "rev": "f5faa9c21b1396c291b471a6a5ad9407d23486a9"
-    }
+    "rev": "f5faa9c21b1396c291b471a6a5ad9407d23486a9"
   },
   "lib/openzeppelin-contracts": {
     "tag": {

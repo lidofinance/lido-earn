@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {TestConfig} from "test/utils/TestConfig.sol";
 
 import {Vault} from "src/Vault.sol";
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
 import {MockVault} from "test/mocks/MockVault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 
@@ -246,18 +246,18 @@ contract VaultConstructorTest is TestConfig {
         new MockVault(address(asset), treasury, VALID_REWARD_FEE, offset, VAULT_NAME, VAULT_SYMBOL);
     }
 
-    /* ========== MORPHO ADAPTER CONSTRUCTOR TESTS ========== */
+    /* ========== ERC4626 ADAPTER CONSTRUCTOR TESTS ========== */
 
-    /// @notice Test that MorphoAdapter constructor reverts when morphoVault address is zero
-    /// @dev Coverage: src/adapters/Morpho.sol:35 - if (morphoVault_ == address(0)) revert MorphoVaultZeroAddress();
-    function test_MorphoConstructor_RevertWhen_MorphoVaultIsZeroAddress() public {
+    /// @notice Test that ERC4626Adapter constructor reverts when target vault address is zero
+    /// @dev Coverage: src/adapters/ERC4626Adapter.sol:59 - if (targetVault_ == address(0)) revert TargetVaultZeroAddress();
+    function test_AdapterConstructor_RevertWhen_TargetVaultIsZeroAddress() public {
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
-        vm.expectRevert(MorphoAdapter.MorphoVaultZeroAddress.selector);
+        vm.expectRevert(ERC4626Adapter.TargetVaultZeroAddress.selector);
 
-        new MorphoAdapter(
+        new ERC4626Adapter(
             address(asset),
-            address(0), // Zero address for morphoVault
+            address(0), // Zero address for target vault
             treasury,
             VALID_REWARD_FEE,
             VALID_OFFSET,

@@ -17,7 +17,7 @@ import {Vault} from "./Vault.sol";
  *          ↑
  *      EmergencyVault (abstract) ← adds emergency functionality
  *          ↑
- *      MorphoAdapter (concrete) ← implements protocol logic
+ *      ERC4626Adapter (concrete) ← implements protocol logic
  *
  *      Emergency Flow:
  *      1. Admin calls emergencyWithdraw() as many times as needed to recover funds from protocol
@@ -59,7 +59,7 @@ import {Vault} from "./Vault.sol";
  *
  *      Scenario 3: Liquidity Constraints (Funds Stuck)
  *      - Situation: Protocol has liquidity issues, cannot withdraw all at once
- *      - Example: MetaMorpho vault has limited available liquidity for immediate withdrawal
+ *      - Example: Target ERC4626 vault has limited available liquidity for immediate withdrawal
  *      - Behavior:
  *        • Multiple emergencyWithdraw() calls possible as liquidity becomes available
  *        • protocolBalance > 0 shows shares still stuck in protocol
@@ -68,8 +68,8 @@ import {Vault} from "./Vault.sol";
  *        • Event shows both what's distributed and what's still stuck
  *
  *      Scenario 4: Share Price Decline (ERC4626 Integrator Loss)
- *      - Situation: Underlying ERC4626 vault (e.g., MetaMorpho) loses value
- *      - Example: MetaMorpho vault's share price drops from 1.0 to 0.8 due to bad debt
+ *      - Situation: Underlying ERC4626 vault loses value
+ *      - Example: Target vault's share price drops from 1.0 to 0.8 due to bad debt
  *      - Behavior:
  *        • emergencyTotalAssets captured before withdrawal reflects old share price
  *        • After withdrawal, our shares are worth 20% less
@@ -79,7 +79,7 @@ import {Vault} from "./Vault.sol";
  *
  *      Scenario 5: Combined Loss and Liquidity Issues
  *      - Situation: Both value loss AND some funds stuck in protocol
- *      - Example: MetaMorpho share price dropped 10%, plus 15% of shares can't be withdrawn
+ *      - Example: Share price dropped 10%, plus 15% of shares can't be withdrawn
  *      - Behavior:
  *        • implicitLoss shows total value gap (10% price drop + 15% stuck if stuck shares are worthless)
  *        • protocolBalance shows the 15% still stuck
@@ -290,12 +290,7 @@ abstract contract EmergencyVault is Vault {
      * @notice Deposit assets (blocked during emergency mode)
      * @dev Reverts if emergency mode is active to block new exposure while recovering funds.
      */
-    function deposit(uint256 assetsToDeposit, address shareReceiver)
-        public
-        virtual
-        override
-        returns (uint256)
-    {
+    function deposit(uint256 assetsToDeposit, address shareReceiver) public virtual override returns (uint256) {
         if (emergencyMode) revert DisabledDuringEmergencyMode();
         return super.deposit(assetsToDeposit, shareReceiver);
     }
@@ -304,12 +299,7 @@ abstract contract EmergencyVault is Vault {
      * @notice Mint shares (blocked during emergency mode)
      * @dev Reverts if emergency mode is active to block new exposure while recovering funds.
      */
-    function mint(uint256 sharesToMint, address shareReceiver)
-        public
-        virtual
-        override
-        returns (uint256)
-    {
+    function mint(uint256 sharesToMint, address shareReceiver) public virtual override returns (uint256) {
         if (emergencyMode) revert DisabledDuringEmergencyMode();
         return super.mint(sharesToMint, shareReceiver);
     }

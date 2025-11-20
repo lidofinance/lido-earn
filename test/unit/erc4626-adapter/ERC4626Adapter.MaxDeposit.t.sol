@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import "./MorphoAdapterTestBase.sol";
+import "./ERC4626AdapterTestBase.sol";
 import {Vault} from "src/Vault.sol";
 
-contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
-    function test_MaxDeposit_RespectsMorphoLimits() public view {
+contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
+    function test_MaxDeposit_RespectsTargetVaultLimits() public view {
         uint256 vaultMaxDeposit = vault.maxDeposit(alice);
-        uint256 morphoMaxDeposit = morpho.maxDeposit(address(vault));
+        uint256 targetMaxDeposit = targetVault.maxDeposit(address(vault));
 
-        assertEq(vaultMaxDeposit, morphoMaxDeposit, "MaxDeposit should match Morpho limits");
+        assertEq(vaultMaxDeposit, targetMaxDeposit, "MaxDeposit should match target vault limits");
     }
 
     function test_MaxDeposit_ReturnsZeroWhenPaused() public {
@@ -21,14 +21,14 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         assertEq(vaultMaxDeposit, 0, "MaxDeposit should be 0 when paused");
     }
 
-    function test_MaxMint_RespectsMorphoLimits() public {
-        morpho.setLiquidityCap(1_000_000e6);
+    function test_MaxMint_RespectsTargetVaultLimits() public {
+        targetVault.setLiquidityCap(1_000_000e6);
 
         uint256 maxMint = vault.maxMint(alice);
-        uint256 morphoMaxDeposit = morpho.maxDeposit(address(vault));
-        uint256 expectedMaxMint = vault.convertToShares(morphoMaxDeposit);
+        uint256 targetMaxDeposit = targetVault.maxDeposit(address(vault));
+        uint256 expectedMaxMint = vault.convertToShares(targetMaxDeposit);
 
-        assertEq(maxMint, expectedMaxMint, "MaxMint should match converted Morpho limits");
+        assertEq(maxMint, expectedMaxMint, "MaxMint should match converted target limits");
     }
 
     function test_MaxMint_ReturnsZeroWhenPaused() public {
@@ -41,7 +41,7 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
     }
 
     function test_Deposit_RevertIf_ExceedsMaxDeposit() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         uint256 vaultMaxDeposit = vault.maxDeposit(alice);
 
@@ -53,7 +53,7 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
     }
 
     function test_Mint_RevertIf_ExceedsMaxDeposit() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         uint256 maxDep = vault.maxDeposit(alice);
 
@@ -65,7 +65,7 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
     }
 
     function test_Mint_ChecksMaxDepositAfterHarvest() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         vm.prank(alice);
         vault.deposit(50_000e6, alice);
@@ -74,7 +74,7 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         assertEq(sharesBefore, 50_000e6 * 10 ** vault.OFFSET());
 
         uint256 profit = 5_000e6;
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         uint256 maxDep = vault.maxDeposit(bob);
 
@@ -92,7 +92,7 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         assertTrue(actualAssets <= maxDep + 10, "Should not exceed maxDeposit");
 
         uint256 totalAssetsFinal = vault.totalAssets();
-        assertTrue(totalAssetsFinal <= 100_000e6, "Should not exceed Morpho cap");
+        assertTrue(totalAssetsFinal <= 100_000e6, "Should not exceed target vault cap");
 
         uint256 bobShares = vault.balanceOf(bob);
         assertEq(bobShares, sharesToMint, "Bob should receive requested shares");
@@ -151,7 +151,7 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
     }
 
     function test_Deposit_WithCap_UpdatesMaxDeposit() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         uint256 initialMaxDeposit = vault.maxDeposit(alice);
 
@@ -168,7 +168,7 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         uint256 deposit = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), cap / 2); // deposit должен быть меньше половины cap для теста
         usdc.mint(alice, deposit);
 
-        morpho.setLiquidityCap(cap);
+        targetVault.setLiquidityCap(cap);
 
         uint256 initialMaxDeposit = vault.maxDeposit(alice);
 
@@ -184,13 +184,13 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
     /// @dev Verifies that deposit() harvests fees BEFORE checking maxDeposit,
     ///      so the fee dilution is already applied when cap check happens
     function test_Deposit_WithFeeDilution_StaysWithinCap() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         vm.prank(alice);
         vault.deposit(90_000e6, alice);
 
         uint256 profit = 5_000e6;
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         uint256 maxDepositBefore = vault.maxDeposit(bob);
         assertEq(maxDepositBefore, 5_000e6, "maxDeposit should be exactly 5,000 USDC");
@@ -207,19 +207,19 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         assertApproxEqAbs(actualAssetsWorth, previewedAssetsWorth, 2, "Actual should match preview in asset terms");
 
         uint256 totalAssetsAfter = vault.totalAssets();
-        assertLe(totalAssetsAfter, 100_000e6, "Should not exceed Morpho cap");
+        assertLe(totalAssetsAfter, 100_000e6, "Should not exceed target vault cap");
     }
 
-    /// @notice Tests that deposit reverts when Morpho vault exceeds cap due to profits
+    /// @notice Tests that deposit reverts when target vault exceeds cap due to profits
     /// @dev When totalAssets > liquidityCap, maxDeposit returns 0, blocking new deposits
     function test_Deposit_WithLargeFeeDilution_MaxDepositBecomesZero() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         vm.prank(alice);
         vault.deposit(95_000e6, alice);
 
         uint256 profit = 47_500e6;
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         uint256 maxDep = vault.maxDeposit(bob);
         assertEq(maxDep, 0, "maxDeposit should be 0 when totalAssets exceeds cap");
@@ -235,13 +235,13 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
     ///      - previewDeposit: simulation function, accounts for harvest and fee dilution
     ///      This difference is crucial for understanding share calculations with pending fees
     function test_Deposit_ConvertToAssetsVsPreviewDeposit_WithPendingFees() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         vm.prank(alice);
         vault.deposit(80_000e6, alice);
 
         uint256 profit = 10_000e6;
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         uint256 maxDep = vault.maxDeposit(bob);
         assertEq(maxDep, 10_000e6, "maxDeposit should be exactly 10,000 USDC");
@@ -260,17 +260,17 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         uint256 previewedAssetsWorth = vault.convertToAssets(sharesFromPreview);
 
         assertApproxEqAbs(actualAssetsWorth, previewedAssetsWorth, 2, "Actual should match preview in asset terms");
-        assertLe(vault.totalAssets(), 100_000e6, "Should not exceed Morpho cap");
+        assertLe(vault.totalAssets(), 100_000e6, "Should not exceed target vault cap");
     }
 
     function test_Mint_WithFeeDilution_StaysWithinCap() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         vm.prank(alice);
         vault.deposit(90_000e6, alice);
 
         uint256 profit = 5_000e6;
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         uint256 maxDepositBefore = vault.maxDeposit(bob);
         assertEq(maxDepositBefore, 5_000e6, "maxDeposit should be exactly 5,000 USDC");
@@ -284,19 +284,19 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         assertApproxEqAbs(actualAssets, previewedAssets, 2, "Actual should match preview");
 
         uint256 totalAssetsAfter = vault.totalAssets();
-        assertLe(totalAssetsAfter, 100_000e6, "Should not exceed Morpho cap");
+        assertLe(totalAssetsAfter, 100_000e6, "Should not exceed target vault cap");
     }
 
-    /// @notice Tests that maxDeposit returns 0 when Morpho vault already exceeds cap due to profits
-    /// @dev When totalAssets > liquidityCap, Morpho returns maxDeposit = 0, blocking new deposits
+    /// @notice Tests that maxDeposit returns 0 when target vault already exceeds cap due to profits
+    /// @dev When totalAssets > liquidityCap, the target vault returns maxDeposit = 0, blocking new deposits
     function test_Mint_WithLargeFeeDilution_MaxDepositBecomesZero() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         vm.prank(alice);
         vault.deposit(95_000e6, alice);
 
         uint256 profit = 47_500e6;
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         uint256 maxDep = vault.maxDeposit(bob);
         assertEq(maxDep, 0, "maxDeposit should be 0 when totalAssets exceeds cap");
@@ -317,13 +317,13 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
     ///      - previewMint: simulation function, accounts for harvest and fee dilution
     ///      This difference is crucial for understanding cap checks and user expectations
     function test_Mint_ConvertToSharesVsPreviewMint_WithPendingFees() public {
-        morpho.setLiquidityCap(100_000e6);
+        targetVault.setLiquidityCap(100_000e6);
 
         vm.prank(alice);
         vault.deposit(80_000e6, alice);
 
         uint256 profit = 10_000e6;
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         uint256 maxDep = vault.maxDeposit(bob);
         assertEq(maxDep, 10_000e6, "maxDeposit should be exactly 10,000 USDC");
@@ -344,6 +344,6 @@ contract MorphoAdapterMaxDepositTest is MorphoAdapterTestBase {
         uint256 actualAssets = vault.mint(sharesToMint, bob);
 
         assertApproxEqAbs(actualAssets, assetsFromPreviewMint, 2, "Actual should match preview");
-        assertLe(vault.totalAssets(), 100_000e6, "Should not exceed Morpho cap");
+        assertLe(vault.totalAssets(), 100_000e6, "Should not exceed target vault cap");
     }
 }

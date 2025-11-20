@@ -3,8 +3,8 @@ pragma solidity 0.8.30;
 
 import "forge-std/Test.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
-import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
+import {MockERC4626Vault} from "test/mocks/MockERC4626Vault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {RewardDistributor} from "src/RewardDistributor.sol";
 
@@ -16,9 +16,9 @@ import {RewardDistributor} from "src/RewardDistributor.sol";
 contract RewardDistributionHandler is Test {
     using Math for uint256;
 
-    MorphoAdapter public vault;
+    ERC4626Adapter public vault;
     MockERC20 public asset;
-    MockMetaMorpho public morpho;
+    MockERC4626Vault public targetVault;
     RewardDistributor public rewardDistributor;
 
     address[] public actors;
@@ -42,15 +42,15 @@ contract RewardDistributionHandler is Test {
     uint256 public totalExpectedTreasuryShares;
 
     constructor(
-        MorphoAdapter _vault,
+        ERC4626Adapter _vault,
         MockERC20 _asset,
-        MockMetaMorpho _morpho,
+        MockERC4626Vault _targetVault,
         RewardDistributor _rewardDistributor,
         address[] memory _actors
     ) {
         vault = _vault;
         asset = _asset;
-        morpho = _morpho;
+        targetVault = _targetVault;
         rewardDistributor = _rewardDistributor;
         actors = _actors;
 
@@ -235,7 +235,7 @@ contract RewardDistributionHandler is Test {
         amount = bound(amount, 0, 10_000e6);
 
         if (amount > 0) {
-            asset.mint(address(morpho), amount);
+            asset.mint(address(targetVault), amount);
         }
     }
 }

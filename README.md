@@ -2,7 +2,7 @@
 
 This repository contains the source code for the smart contracts implementing Lido Earn yield vault middleware.
 
-Lido Earn is a ERC4626-compliant vault infrastructure that enables integration of DeFi yield strategies (starting with Morpho) into wallets and applications. The system provides a foundation for yield aggregation with comprehensive security controls, fee management, and reward distribution.
+Lido Earn is an ERC4626-compliant vault infrastructure that enables integration of arbitrary ERC4626 yield strategies into wallets and applications. The system provides a foundation for yield aggregation with comprehensive security controls, fee management, and reward distribution.
 
 The architecture implements:
 1. **Abstract Vault base** with ERC4626 compliance, access control, fee harvesting, inflation attack protection, and emergency mechanisms
@@ -44,7 +44,7 @@ This repository contains different sets of tests written using the Foundry frame
 - **Unit tests** - Comprehensive tests covering each module in isolation (deposits, withdrawals, fees, access control, pausable behavior, emergency operations, etc.). This is the most thorough set of tests covering every edge case.
 
 - **Integration tests** - Tests that verify how contracts work in a forked environment using real protocol state:
-    - **Mainnet fork tests** - Verify integration with real Morpho vaults using mainnet state
+    - **Mainnet fork tests** - Verify integration with real ERC4626 vaults (e.g. Morpho) using mainnet state
     - **Reward distribution tests** - End-to-end testing of fee collection and distribution flows
 
 - **Invariant tests** - Property-based fuzzing tests that verify critical system invariants hold under all conditions:

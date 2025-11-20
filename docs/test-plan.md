@@ -30,7 +30,7 @@
 | testFuzz_Constructor_ValidOffset | Fuzz valid offsets 0-23 | All valid offsets accepted |
 | testFuzz_Constructor_InvalidRewardFee | Fuzz invalid fees >2000 | All invalid fees rejected |
 | testFuzz_Constructor_InvalidOffset | Fuzz invalid offsets >23 | All invalid offsets rejected |
-| test_MorphoConstructor_RevertWhen_MorphoVaultIsZeroAddress | Morpho vault validation | Reverts with MorphoVaultZeroAddress |
+| test_AdapterConstructor_RevertWhen_TargetVaultIsZeroAddress | Target vault validation | Reverts with TargetVaultZeroAddress |
 
 ---
 
@@ -308,32 +308,32 @@
 
 ---
 
-## MorphoAdapter Tests
+## ERC4626Adapter Tests
 
-### MorphoAdapter.Initialization.t.sol (10 tests)
+### ERC4626Adapter.Initialization.t.sol (10 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
-| test_Initialization | State variable setup | ASSET, MORPHO_VAULT, TREASURY, OFFSET, rewardFee set |
+| test_Initialization | State variable setup | ASSET, TARGET_VAULT, TREASURY, OFFSET, rewardFee set |
 | test_InitialState | Zero balances/supply | totalSupply, totalAssets, balances = 0 |
-| test_MorphoApprovalSetup | Infinite approval | Allowance = type(uint256).max for Morpho |
+| test_TargetVaultApprovalSetup | Infinite approval | Allowance = type(uint256).max for target vault |
 | test_Offset_InitialValue | OFFSET setup | OFFSET matches constructor input |
 | test_Offset_ProtectsAgainstInflationAttack | Inflation protection | Victim receives fair shares despite donation |
-| testFuzz_TotalAssets_ReflectsMorphoBalance | totalAssets accuracy | totalAssets = Morpho convertToAssets(shares) |
+| testFuzz_TotalAssets_ReflectsTargetVaultBalance | totalAssets accuracy | totalAssets = targetVault.convertToAssets(shares) |
 | testFuzz_MaxWithdraw | maxWithdraw calculation | maxWithdraw ≈ user's deposit |
 | testFuzz_DepositWithdraw_RoundingDoesNotCauseLoss | Round-trip preservation | User recovers ~full balance (±2 wei) |
 | test_MultipleDepositsWithdraws_MaintainsAccounting | Multi-operation accounting | Assets ≈ expected after multiple ops |
 
 ---
 
-### MorphoAdapter.Deposit.t.sol (10 tests)
+### ERC4626Adapter.Deposit.t.sol (10 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
 | testFuzz_Deposit_EmitsEvent | Event emission | Deposited event with correct params |
 | testFuzz_Deposit_MultipleUsers | Multi-user deposits | Each user receives correct shares, totals correct |
-| testFuzz_Deposit_UpdatesMorphoBalance | Morpho position update | Morpho shares increase by deposit * 10^OFFSET |
-| test_Deposit_RevertIf_MorphoReturnsZeroShares | Morpho zero shares | Reverts with MorphoDepositFailed |
+| testFuzz_Deposit_UpdatesTargetVaultBalance | Target vault position update | Target shares increase by deposit * 10^OFFSET |
+| test_Deposit_RevertIf_TargetVaultReturnsZeroShares | Target vault zero shares | Reverts with TargetVaultDepositFailed |
 | test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with ZeroAmount |
 | test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
 | test_Deposit_RevertIf_Paused | Pause enforcement | Reverts when paused |
@@ -342,14 +342,14 @@
 
 ---
 
-### MorphoAdapter.Withdraw.t.sol (10 tests)
+### ERC4626Adapter.Withdraw.t.sol (10 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
 | testFuzz_Withdraw_LeavesPositiveShares | Partial withdrawals | Remaining shares > 0, accounting correct |
 | testFuzz_Withdraw_EmitsEvent | Event emission | Withdrawn event with correct params |
 | testFuzz_Withdraw_RevertIf_InsufficientShares | Balance check | Reverts with InsufficientShares |
-| testFuzz_Withdraw_RevertIf_InsufficientLiquidity | Morpho liquidity | Reverts with InsufficientLiquidity at cap |
+| testFuzz_Withdraw_RevertIf_InsufficientLiquidity | Target vault liquidity | Reverts with InsufficientLiquidity at cap |
 | testFuzz_Redeem_AllShares | Full redemption | All shares burned, all assets recovered |
 | testFuzz_Withdraw_DelegatedWithApproval | Delegated withdrawal | Works with approval, allowance consumed |
 | testFuzz_Withdraw_DelegatedRevertIf_InsufficientAllowance | Insufficient allowance | Reverts when allowance insufficient |
@@ -359,7 +359,7 @@
 
 ---
 
-### MorphoAdapter.Fees.t.sol (23 tests)
+### ERC4626Adapter.Fees.t.sol (23 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
@@ -372,7 +372,7 @@
 | test_SetRewardFee_UpdatesLastTotalAssets | State update | lastTotalAssets = totalAssets after update |
 | test_SetRewardFee_WithFeeManagerRole | Role-based update | Role holder can update |
 | test_SetRewardFee_MultipleChanges | Sequential changes | All changes succeed |
-| test_HarvestFees_WithProfit | Morpho profit harvest | Treasury receives shares from profit |
+| test_HarvestFees_WithProfit | Profit harvest | Treasury receives shares from profit |
 | test_HarvestFees_EmitsEvent | Event emission | FeesHarvested event emitted |
 | test_HarvestFees_NoProfit | No profit scenario | Treasury receives no shares |
 | test_HarvestFees_WithLoss | Loss scenario | Treasury receives no shares |
@@ -389,23 +389,23 @@
 
 ---
 
-### MorphoAdapter.Emergency.t.sol (3 tests)
+### ERC4626Adapter.Emergency.t.sol (3 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
 | test_EmergencyWithdraw_ReturnsZeroWhenNoShares | Empty position emergency | Returns 0, receiver gets 0 |
-| test_EmergencyWithdraw_RedeemsMorphoShares | Morpho shares redemption | All shares redeemed, assets transferred, balance = 0 |
+| test_EmergencyWithdraw_RedeemsTargetVaultShares | Target vault redemption | All shares redeemed, assets transferred, balance = 0 |
 | test_EmergencyWithdraw_WithLiquidityCap | Emergency withdrawal with liquidity cap | Withdraws up to cap, then remaining after cap removal |
 
 ---
 
-### MorphoAdapter.MaxDeposit.t.sol (17 tests)
+### ERC4626Adapter.MaxDeposit.t.sol (17 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
-| test_MaxDeposit_RespectsMorphoLimits | Morpho cap enforcement | Vault maxDeposit = Morpho maxDeposit |
+| test_MaxDeposit_RespectsTargetVaultLimits | Target cap enforcement | Vault maxDeposit = targetVault.maxDeposit |
 | test_MaxDeposit_ReturnsZeroWhenPaused | maxDeposit when paused | maxDeposit = 0 when paused |
-| test_MaxMint_RespectsMorphoLimits | Morpho cap for mint | maxMint = convertToShares(Morpho maxDeposit) |
+| test_MaxMint_RespectsTargetVaultLimits | Target cap for mint | maxMint = convertToShares(targetVault.maxDeposit) |
 | test_MaxMint_ReturnsZeroWhenPaused | maxMint when paused | maxMint = 0 when paused |
 | test_Deposit_RevertIf_ExceedsMaxDeposit | Deposit cap check | Reverts with ExceedsMaxDeposit |
 | test_Mint_RevertIf_ExceedsMaxDeposit | Mint cap check | Reverts when assets required exceed cap |
@@ -422,7 +422,7 @@
 
 ---
 
-### MorphoAdapter.Permit.t.sol (5 tests)
+### ERC4626Adapter.Permit.t.sol (5 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
@@ -434,17 +434,17 @@
 
 ---
 
-### MorphoAdapter.Approval.t.sol (7 tests)
+### ERC4626Adapter.Approval.t.sol (7 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
-| test_RefreshMorphoApproval_Success | Approval refresh | Approval reset to type(uint256).max |
-| test_RefreshMorphoApproval_RevertWhen_NotAdmin | Admin authorization | Reverts without DEFAULT_ADMIN_ROLE |
-| test_RefreshMorphoApproval_SetsMaxApproval | Max approval | Allowance = type(uint256).max |
-| test_RefreshMorphoApproval_EmitsApprovalEvent | Event emission | Approval event with correct params |
-| test_RefreshMorphoApproval_WorksWhenAlreadyMax | Refresh when max | Succeeds without revert |
-| test_RefreshMorphoApproval_RestoresDepositFunctionality | Functionality restoration | Refresh enables deposits after approval consumed |
-| test_RefreshMorphoApproval_OnlyAdminRole | Role requirement | DEFAULT_ADMIN_ROLE required |
+| test_RefreshVaultApproval_Success | Approval refresh | Approval reset to type(uint256).max |
+| test_RefreshVaultApproval_RevertWhen_NotAdmin | Admin authorization | Reverts without DEFAULT_ADMIN_ROLE |
+| test_RefreshVaultApproval_SetsMaxApproval | Max approval | Allowance = type(uint256).max |
+| test_RefreshVaultApproval_EmitsApprovalEvent | Event emission | Approval event with correct params |
+| test_RefreshVaultApproval_WorksWhenAlreadyMax | Refresh when max | Succeeds without revert |
+| test_RefreshVaultApproval_RestoresDepositFunctionality | Functionality restoration | Refresh enables deposits after approval consumed |
+| test_RefreshVaultApproval_OnlyAdminRole | Role requirement | DEFAULT_ADMIN_ROLE required |
 
 ---
 
@@ -505,7 +505,7 @@ forge test
 
 # Run specific category
 forge test --match-path "test/unit/vault/**/*.sol"
-forge test --match-path "test/unit/morpho-adapter/**/*.sol"
+forge test --match-path "test/unit/erc4626-adapter/**/*.sol"
 forge test --match-path "test/unit/reward-distributor/**/*.sol"
 forge test --match-path "test/invariant/**/*.sol"
 
@@ -542,7 +542,7 @@ forge test --gas-report
 - Tests validate correctness across wide range of values (MIN_FIRST_DEPOSIT to max safe uint96)
 
 **Integration Testing:**
-- Morpho vault interaction, capacity limit respect
+- Target ERC4626 vault interaction, capacity limit respect
 - Fee harvesting with external profit, emergency scenarios
 - `test/integration/Solvency.t.sol::test_Solvency_WithRandomCycles` — randomized deposit/withdraw cycles across 32 actors with periodic profit injections; validates solvency, treasury fee redemption, and that the vault ends with zero residual assets under sub-10 wei tolerances
 

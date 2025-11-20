@@ -3,16 +3,16 @@ pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
-import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
+import {MockERC4626Vault} from "test/mocks/MockERC4626Vault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {TestConfig} from "test/utils/TestConfig.sol";
 
-contract MorphoAdapterTestBase is TestConfig {
+contract ERC4626AdapterTestBase is TestConfig {
     using Math for uint256;
 
-    MorphoAdapter public vault;
-    MockMetaMorpho public morpho;
+    ERC4626Adapter public vault;
+    MockERC4626Vault public targetVault;
     MockERC20 public usdc;
     uint8 internal assetDecimals;
 
@@ -32,10 +32,10 @@ contract MorphoAdapterTestBase is TestConfig {
     function setUp() public virtual {
         assetDecimals = _assetDecimals();
         usdc = new MockERC20("USD Coin", "USDC", assetDecimals);
-        morpho = new MockMetaMorpho(IERC20(address(usdc)), "Mock Morpho USDC", "mUSDC", OFFSET);
+        targetVault = new MockERC4626Vault(IERC20(address(usdc)), "Mock Yield Vault", "yUSDC", OFFSET);
 
-        vault = new MorphoAdapter(
-            address(usdc), address(morpho), treasury, REWARD_FEE, OFFSET, "Morpho USDC Vault", "mvUSDC"
+        vault = new ERC4626Adapter(
+            address(usdc), address(targetVault), treasury, REWARD_FEE, OFFSET, "Lido ERC4626 Vault", "lido4626"
         );
 
         usdc.mint(alice, INITIAL_BALANCE);

@@ -3,9 +3,9 @@ pragma solidity 0.8.30;
 
 import {Vm} from "forge-std/Vm.sol";
 import {Vault} from "src/Vault.sol";
-import "./MorphoAdapterTestBase.sol";
+import "./ERC4626AdapterTestBase.sol";
 
-contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
+contract ERC4626AdapterFeesTest is ERC4626AdapterTestBase {
     /* ========== SET REWARD FEE TESTS ========== */
 
     function test_SetRewardFee_Basic() public {
@@ -69,7 +69,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
@@ -84,7 +84,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 10_000e6);
 
         uint256 lastTotalAssetsBefore = vault.lastTotalAssets();
 
@@ -135,7 +135,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         uint256 initialTreasuryShares = vault.balanceOf(treasury);
 
         uint256 profit = 10_000e6;
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + profit);
 
         vault.harvestFees();
 
@@ -154,7 +154,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
 
         uint256 initialTreasuryShares = vault.balanceOf(treasury);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + profit);
 
         vault.harvestFees();
 
@@ -168,7 +168,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vault.deposit(100_000e6, alice);
 
         uint256 profit = 10_000e6;
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + profit);
 
         vm.recordLogs();
         vault.harvestFees();
@@ -208,8 +208,8 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
-        uint256 currentBalance = usdc.balanceOf(address(morpho));
-        deal(address(usdc), address(morpho), currentBalance - 5_000e6);
+        uint256 currentBalance = usdc.balanceOf(address(targetVault));
+        deal(address(usdc), address(targetVault), currentBalance - 5_000e6);
 
         vault.harvestFees();
 
@@ -221,7 +221,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 10_000e6);
 
         uint256 totalAssetsBefore = vault.totalAssets();
 
@@ -252,11 +252,11 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 5_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 5_000e6);
         vault.harvestFees();
         uint256 treasurySharesAfterFirst = vault.balanceOf(treasury);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 3_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 3_000e6);
         vault.harvestFees();
         uint256 treasurySharesAfterSecond = vault.balanceOf(treasury);
 
@@ -268,7 +268,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(50_000e6, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
@@ -284,7 +284,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 10_000e6);
 
         uint256 treasurySharesBefore = vault.balanceOf(treasury);
 
@@ -302,7 +302,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vault.deposit(100_000e6, alice);
 
         uint256 profit = 10_000e6;
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + profit);
 
         uint256 expectedFeeAmount = (profit * vault.rewardFee()) / vault.MAX_BASIS_POINTS();
 
@@ -318,7 +318,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(deposit, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + profit);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + profit);
 
         uint256 expectedFeeAmount = (profit * vault.rewardFee()) / vault.MAX_BASIS_POINTS();
 
@@ -339,8 +339,8 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        uint256 currentBalance = usdc.balanceOf(address(morpho));
-        deal(address(usdc), address(morpho), currentBalance - 5_000e6);
+        uint256 currentBalance = usdc.balanceOf(address(targetVault));
+        deal(address(usdc), address(targetVault), currentBalance - 5_000e6);
 
         uint256 pendingFees = vault.getPendingFees();
         assertEq(pendingFees, 0);
@@ -350,7 +350,7 @@ contract MorphoAdapterFeesTest is MorphoAdapterTestBase {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
 
-        deal(address(usdc), address(morpho), usdc.balanceOf(address(morpho)) + 10_000e6);
+        deal(address(usdc), address(targetVault), usdc.balanceOf(address(targetVault)) + 10_000e6);
 
         uint256 pendingFeesBefore = vault.getPendingFees();
         assertGt(pendingFeesBefore, 0);

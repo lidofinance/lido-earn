@@ -22,16 +22,16 @@ pragma solidity 0.8.30;
  */
 import {TestConfig} from "test/utils/TestConfig.sol";
 import "forge-std/console.sol";
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
-import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
+import {MockERC4626Vault} from "test/mocks/MockERC4626Vault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {RewardDistributor} from "src/RewardDistributor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VaultHandler} from "./handlers/VaultHandler.sol";
 
 contract VaultInvariantTest is TestConfig {
-    MorphoAdapter public vault;
-    MockMetaMorpho public morpho;
+    ERC4626Adapter public vault;
+    MockERC4626Vault public targetVault;
     MockERC20 public usdc;
     RewardDistributor public rewardDistributor;
     VaultHandler public handler;
@@ -47,7 +47,7 @@ contract VaultInvariantTest is TestConfig {
     function setUp() public {
         usdc = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
-        morpho = new MockMetaMorpho(IERC20(address(usdc)), "Mock Morpho USDC", "mUSDC", OFFSET);
+        targetVault = new MockERC4626Vault(IERC20(address(usdc)), "Mock Yield USDC", "yUSDC", OFFSET);
 
         address[] memory recipients = new address[](2);
         recipients[0] = recipient1;
@@ -59,9 +59,9 @@ contract VaultInvariantTest is TestConfig {
 
         rewardDistributor = new RewardDistributor(manager, recipients, basisPoints);
 
-        vault = new MorphoAdapter(
+        vault = new ERC4626Adapter(
             address(usdc),
-            address(morpho),
+            address(targetVault),
             address(rewardDistributor),
             REWARD_FEE,
             OFFSET,
@@ -74,12 +74,12 @@ contract VaultInvariantTest is TestConfig {
         actors[1] = makeAddr("actor2");
         actors[2] = makeAddr("actor3");
 
-        handler = new VaultHandler(vault, usdc, morpho, actors);
+        handler = new VaultHandler(vault, usdc, targetVault, actors);
 
         targetContract(address(handler));
 
         excludeContract(address(vault));
-        excludeContract(address(morpho));
+        excludeContract(address(targetVault));
         excludeContract(address(usdc));
         excludeContract(address(rewardDistributor));
 

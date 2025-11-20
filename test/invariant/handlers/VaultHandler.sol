@@ -2,8 +2,8 @@
 pragma solidity 0.8.30;
 
 import "forge-std/Test.sol";
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
-import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
+import {MockERC4626Vault} from "test/mocks/MockERC4626Vault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 
 /**
@@ -12,9 +12,9 @@ import {MockERC20} from "test/mocks/MockERC20.sol";
  * @dev Executes random vault operations (deposit, withdraw, mint, redeem)
  */
 contract VaultHandler is Test {
-    MorphoAdapter public vault;
+    ERC4626Adapter public vault;
     MockERC20 public asset;
-    MockMetaMorpho public morpho;
+    MockERC4626Vault public targetVault;
 
     address[] public actors;
 
@@ -23,10 +23,10 @@ contract VaultHandler is Test {
     uint256 public mintsCount;
     uint256 public redeemsCount;
 
-    constructor(MorphoAdapter _vault, MockERC20 _asset, MockMetaMorpho _morpho, address[] memory _actors) {
+    constructor(ERC4626Adapter _vault, MockERC20 _asset, MockERC4626Vault _targetVault, address[] memory _actors) {
         vault = _vault;
         asset = _asset;
-        morpho = _morpho;
+        targetVault = _targetVault;
         actors = _actors;
 
         for (uint256 i = 0; i < actors.length; i++) {
@@ -118,7 +118,7 @@ contract VaultHandler is Test {
         amount = bound(amount, 0, 10_000e6);
 
         if (amount > 0) {
-            asset.mint(address(morpho), amount);
+            asset.mint(address(targetVault), amount);
         }
     }
 }

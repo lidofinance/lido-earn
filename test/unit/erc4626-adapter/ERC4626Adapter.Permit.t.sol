@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import "./MorphoAdapterTestBase.sol";
+import "./ERC4626AdapterTestBase.sol";
 
-contract MorphoAdapterPermitTest is MorphoAdapterTestBase {
+contract ERC4626AdapterPermitTest is ERC4626AdapterTestBase {
     function test_Permit_Basic() public {
         uint256 ownerPrivateKey = 0xA11CE;
         address owner = vm.addr(ownerPrivateKey);

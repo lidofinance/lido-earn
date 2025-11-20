@@ -149,7 +149,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(alice);
         vault.deposit(amount, alice);
 
-        morpho.setLiquidityCap(amount / 2);
+        targetVault.setLiquidityCap(amount / 2);
 
         vm.prank(emergencyAdmin);
         uint256 firstRecovered = vault.emergencyWithdraw();
@@ -157,7 +157,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertApproxEqAbs(firstRecovered, amount / 2, 2);
         assertGt(vault.getProtocolBalance(), 0);
 
-        morpho.setLiquidityCap(type(uint256).max);
+        targetVault.setLiquidityCap(type(uint256).max);
 
         vm.prank(emergencyAdmin);
         uint256 secondRecovered = vault.emergencyWithdraw();
@@ -221,14 +221,14 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(alice);
         vault.deposit(amount, alice);
 
-        morpho.setLiquidityCap(amount / 2);
+        targetVault.setLiquidityCap(amount / 2);
 
         vm.prank(emergencyAdmin);
         vault.emergencyWithdraw();
 
         uint256 snapshot = vault.emergencyTotalAssets();
 
-        morpho.setLiquidityCap(type(uint256).max);
+        targetVault.setLiquidityCap(type(uint256).max);
 
         vm.prank(emergencyAdmin);
         vault.emergencyWithdraw();
@@ -267,7 +267,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(alice);
         vault.deposit(amount, alice);
 
-        usdc.mint(address(morpho), amount / 10);
+        usdc.mint(address(targetVault), amount / 10);
 
         uint256 totalSupplyBefore = vault.totalSupply();
 
@@ -355,7 +355,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.deposit(amount, alice);
 
         uint256 partialCap = amount * 90 / 100;
-        morpho.setLiquidityCap(partialCap);
+        targetVault.setLiquidityCap(partialCap);
 
         vm.prank(emergencyAdmin);
         vault.emergencyWithdraw();
@@ -954,7 +954,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.deposit(amount, alice);
 
         uint256 partialCap = amount * 90 / 100;
-        morpho.setLiquidityCap(partialCap);
+        targetVault.setLiquidityCap(partialCap);
 
         vm.prank(emergencyAdmin);
         vault.emergencyWithdraw();
@@ -962,7 +962,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         uint256 vaultBalance = usdc.balanceOf(address(vault));
         assertApproxEqAbs(vaultBalance, partialCap, 2);
 
-        morpho.setLiquidityCap(type(uint256).max);
+        targetVault.setLiquidityCap(type(uint256).max);
 
         vm.prank(emergencyAdmin);
         vault.emergencyWithdraw();
@@ -1087,9 +1087,9 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(alice);
         vault.deposit(amount, alice);
 
-        // Simulate profit accumulation (mint rewards to morpho)
+        // Simulate profit accumulation (mint rewards to targetVault)
         uint256 profit = amount / 10; // 10% profit
-        usdc.mint(address(morpho), profit);
+        usdc.mint(address(targetVault), profit);
 
         // Emergency withdraw snapshots total including profit
         vm.prank(emergencyAdmin);
@@ -1123,7 +1123,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
         // Set liquidity cap to only allow 70% withdrawal
         uint256 partialCap = amount * 70 / 100;
-        morpho.setLiquidityCap(partialCap);
+        targetVault.setLiquidityCap(partialCap);
 
         // Emergency withdraw (partial)
         vm.prank(emergencyAdmin);

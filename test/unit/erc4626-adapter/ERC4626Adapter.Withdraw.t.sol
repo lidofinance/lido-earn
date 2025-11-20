@@ -2,9 +2,9 @@
 pragma solidity 0.8.30;
 
 import {Vault} from "src/Vault.sol";
-import "./MorphoAdapterTestBase.sol";
+import "./ERC4626AdapterTestBase.sol";
 
-contract MorphoAdapterWithdrawTest is MorphoAdapterTestBase {
+contract ERC4626AdapterWithdrawTest is ERC4626AdapterTestBase {
     function testFuzz_Withdraw_LeavesPositiveShares(uint96 depositAmount, uint96 withdrawAmount) public {
         uint256 depositAssets = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         uint256 withdrawAssets = bound(uint256(withdrawAmount), 1, depositAssets - 1);
@@ -64,7 +64,7 @@ contract MorphoAdapterWithdrawTest is MorphoAdapterTestBase {
         vault.deposit(depositAssets, alice);
 
         uint256 cap = withdrawAssets - 1;
-        morpho.setLiquidityCap(cap);
+        targetVault.setLiquidityCap(cap);
 
         vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientLiquidity.selector, withdrawAssets, cap));
 

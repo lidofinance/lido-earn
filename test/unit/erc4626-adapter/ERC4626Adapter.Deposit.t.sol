@@ -2,9 +2,9 @@
 pragma solidity 0.8.30;
 
 import {Vault} from "src/Vault.sol";
-import "./MorphoAdapterTestBase.sol";
+import "./ERC4626AdapterTestBase.sol";
 
-contract MorphoAdapterDepositTest is MorphoAdapterTestBase {
+contract ERC4626AdapterDepositTest is ERC4626AdapterTestBase {
     function testFuzz_Deposit_EmitsEvent(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -39,30 +39,30 @@ contract MorphoAdapterDepositTest is MorphoAdapterTestBase {
         assertApproxEqAbs(vault.totalAssets(), aliceDeposit + bobDeposit, 2);
     }
 
-    function testFuzz_Deposit_UpdatesMorphoBalance(uint96 depositAmount) public {
+    function testFuzz_Deposit_UpdatesTargetVaultBalance(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
 
-        uint256 morphoBalanceBefore = morpho.balanceOf(address(vault));
-        assertEq(morphoBalanceBefore, 0);
+        uint256 targetBalanceBefore = targetVault.balanceOf(address(vault));
+        assertEq(targetBalanceBefore, 0);
 
         vm.prank(alice);
         vault.deposit(amount, alice);
 
-        uint256 morphoBalanceAfter = morpho.balanceOf(address(vault));
-        uint256 expectedMorphoShares = amount * 10 ** OFFSET;
+        uint256 targetBalanceAfter = targetVault.balanceOf(address(vault));
+        uint256 expectedTargetShares = amount * 10 ** OFFSET;
 
-        assertEq(morphoBalanceAfter, expectedMorphoShares);
+        assertEq(targetBalanceAfter, expectedTargetShares);
     }
 
-    function test_Deposit_RevertIf_MorphoReturnsZeroShares() public {
-        morpho.setForceZeroDeposit(true);
+    function test_Deposit_RevertIf_TargetVaultReturnsZeroShares() public {
+        targetVault.setForceZeroDeposit(true);
 
-        vm.expectRevert(MorphoAdapter.MorphoDepositFailed.selector);
+        vm.expectRevert(ERC4626Adapter.TargetVaultDepositFailed.selector);
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
 
-        morpho.setForceZeroDeposit(false);
+        targetVault.setForceZeroDeposit(false);
     }
 
     function test_Deposit_RevertIf_ZeroAmount() public {

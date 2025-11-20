@@ -2,10 +2,10 @@
 pragma solidity 0.8.30;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import "test/unit/morpho-adapter/MorphoAdapterTestBase.sol";
+import "test/unit/erc4626-adapter/ERC4626AdapterTestBase.sol";
 import "forge-std/console.sol";
 
-contract SolvencyTest is MorphoAdapterTestBase {
+contract SolvencyTest is ERC4626AdapterTestBase {
     using Math for uint256;
 
     address[] public users;
@@ -59,7 +59,7 @@ contract SolvencyTest is MorphoAdapterTestBase {
 
             if (i > 0 && i % 10 == 0) {
                 uint256 profit = 10_000e6;
-                usdc.mint(address(morpho), profit);
+                usdc.mint(address(targetVault), profit);
                 totalProfit += profit;
             }
         }
@@ -107,7 +107,7 @@ contract SolvencyTest is MorphoAdapterTestBase {
         }
 
         uint256 accruedProfit = 5_000_000e6;
-        usdc.mint(address(morpho), accruedProfit);
+        usdc.mint(address(targetVault), accruedProfit);
 
         vm.prank(address(this));
         vault.emergencyWithdraw();

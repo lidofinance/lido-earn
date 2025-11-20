@@ -6,16 +6,16 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {MorphoAdapter} from "src/adapters/Morpho.sol";
-import {MockMetaMorpho} from "test/mocks/MockMetaMorpho.sol";
+import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
+import {MockERC4626Vault} from "test/mocks/MockERC4626Vault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 import {RewardDistributor} from "src/RewardDistributor.sol";
 
 contract RewardDistributionIntegrationTest is TestConfig {
     using Math for uint256;
 
-    MorphoAdapter public vault;
-    MockMetaMorpho public morpho;
+    ERC4626Adapter public vault;
+    MockERC4626Vault public targetVault;
     MockERC20 public usdc;
     RewardDistributor public rewardDistributor;
 
@@ -34,7 +34,7 @@ contract RewardDistributionIntegrationTest is TestConfig {
     function setUp() public {
         usdc = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
-        morpho = new MockMetaMorpho(IERC20(address(usdc)), "Mock Morpho USDC", "mUSDC", OFFSET);
+        targetVault = new MockERC4626Vault(IERC20(address(usdc)), "Mock Yield Vault", "yUSDC", OFFSET);
 
         // Setup RewardDistributor with 2 recipients: 5% and 95%
         address[] memory recipients = new address[](2);
@@ -47,14 +47,14 @@ contract RewardDistributionIntegrationTest is TestConfig {
 
         rewardDistributor = new RewardDistributor(manager, recipients, basisPoints);
 
-        vault = new MorphoAdapter(
+        vault = new ERC4626Adapter(
             address(usdc),
-            address(morpho),
+            address(targetVault),
             address(rewardDistributor),
             REWARD_FEE_BASIS_POINTS,
             OFFSET,
-            "Morpho USDC Vault",
-            "mvUSDC"
+            "Lido ERC4626 Vault",
+            "lido4626"
         );
 
         usdc.mint(alice, INITIAL_BALANCE);
@@ -76,13 +76,13 @@ contract RewardDistributionIntegrationTest is TestConfig {
     }
 
     function _addRewardsByBasisPoints(uint256 basisPoints) internal {
-        uint256 currentBalance = usdc.balanceOf(address(morpho));
+        uint256 currentBalance = usdc.balanceOf(address(targetVault));
         uint256 yieldAmount = (currentBalance * basisPoints) / MAX_BASIS_POINTS;
-        usdc.mint(address(morpho), yieldAmount);
+        usdc.mint(address(targetVault), yieldAmount);
     }
 
     function _addRewardsByAmount(uint256 amount) internal {
-        usdc.mint(address(morpho), amount);
+        usdc.mint(address(targetVault), amount);
     }
 
     function test_RewardDistribution_HappyPath() public {
