@@ -71,6 +71,7 @@ contract ERC4626Adapter is EmergencyVault {
      * @param offset_ Decimals offset for inflation protection (0-23)
      * @param name_ ERC20 name for vault shares
      * @param symbol_ ERC20 symbol for vault shares
+     * @param admin_ Address that will receive all roles (admin, pauser, fee manager, emergency)
      */
     constructor(
         address asset_,
@@ -79,8 +80,9 @@ contract ERC4626Adapter is EmergencyVault {
         uint16 rewardFee_,
         uint8 offset_,
         string memory name_,
-        string memory symbol_
-    ) Vault(IERC20(asset_), treasury_, rewardFee_, offset_, name_, symbol_) {
+        string memory symbol_,
+        address admin_
+    ) Vault(IERC20(asset_), treasury_, rewardFee_, offset_, name_, symbol_, admin_) {
         if (targetVault_ == address(0)) revert TargetVaultZeroAddress();
 
         TARGET_VAULT = IERC4626(targetVault_);
@@ -95,6 +97,7 @@ contract ERC4626Adapter is EmergencyVault {
      * @notice Returns total assets under management in the adapter
      * @dev Sums assets in target vault and idle vault balance.
      *      During emergency mode funds may sit idle while being distributed.
+     * @return Total assets managed by the adapter (in target vault + idle balance during emergency)
      */
     function totalAssets() public view override returns (uint256) {
         uint256 targetShares = TARGET_VAULT.balanceOf(address(this));
@@ -114,6 +117,7 @@ contract ERC4626Adapter is EmergencyVault {
     /**
      * @notice Returns maximum assets that can be deposited for a given address
      * @dev Respects pause state plus target vault capacity limits.
+     * @return Maximum assets that can be deposited (0 if paused, otherwise target vault capacity)
      */
     function maxDeposit(address /* user */ ) public view override returns (uint256) {
         if (paused()) return 0;
@@ -123,6 +127,7 @@ contract ERC4626Adapter is EmergencyVault {
     /**
      * @notice Returns maximum shares that can be minted for a given address
      * @dev Converts available deposit capacity to vault shares.
+     * @return Maximum shares that can be minted (0 if paused, otherwise converted from target vault capacity)
      */
     function maxMint(address /* user */ ) public view override returns (uint256) {
         if (paused()) return 0;
@@ -133,6 +138,8 @@ contract ERC4626Adapter is EmergencyVault {
     /**
      * @notice Returns maximum assets that can be withdrawn by owner
      * @dev Minimum of user share value and target vault liquidity.
+     * @param owner Address to check maximum withdrawal for
+     * @return Maximum assets withdrawable by owner (limited by either share balance or target vault liquidity)
      */
     function maxWithdraw(address owner) public view override returns (uint256) {
         return Math.min(super.maxWithdraw(owner), TARGET_VAULT.maxWithdraw(address(this)));
@@ -142,6 +149,9 @@ contract ERC4626Adapter is EmergencyVault {
 
     /**
      * @notice Deposits assets into the target ERC4626 vault
+     * @dev Calls target vault's deposit function and emits TargetVaultDeposit event
+     * @param assets Amount of assets to deposit into target vault
+     * @return shares Amount of target vault shares received
      */
     function _depositToProtocol(uint256 assets) internal override returns (uint256 shares) {
         shares = TARGET_VAULT.deposit(assets, address(this));
@@ -153,6 +163,10 @@ contract ERC4626Adapter is EmergencyVault {
 
     /**
      * @notice Withdraws assets from the target ERC4626 vault
+     * @dev Validates liquidity before withdrawal and emits TargetVaultWithdrawal event
+     * @param assets Amount of assets to withdraw from target vault
+     * @param receiver Address that will receive the withdrawn assets
+     * @return Amount of assets withdrawn (always equals input assets if successful)
      */
     function _withdrawFromProtocol(uint256 assets, address receiver) internal override returns (uint256) {
         uint256 availableAssets = TARGET_VAULT.maxWithdraw(address(this));
@@ -167,6 +181,9 @@ contract ERC4626Adapter is EmergencyVault {
 
     /**
      * @notice Emergency withdrawal of all target vault positions
+     * @dev Redeems all available target vault shares and transfers assets to receiver
+     * @param receiver Address that will receive the withdrawn assets
+     * @return assets Amount of assets withdrawn from target vault
      */
     function _emergencyWithdrawFromProtocol(address receiver) internal override returns (uint256 assets) {
         uint256 targetShares = TARGET_VAULT.maxRedeem(address(this));
@@ -176,6 +193,8 @@ contract ERC4626Adapter is EmergencyVault {
 
     /**
      * @notice Returns current balance in the target ERC4626 vault
+     * @dev Converts adapter's target vault shares to asset value
+     * @return Current value of target vault shares held by adapter (in asset terms)
      */
     function _getProtocolBalance() internal view override returns (uint256) {
         uint256 targetShares = TARGET_VAULT.balanceOf(address(this));
@@ -187,6 +206,8 @@ contract ERC4626Adapter is EmergencyVault {
 
     /**
      * @notice Refreshes the infinite approval to the target ERC4626 vault
+     * @dev Resets approval to type(uint256).max. Only callable by DEFAULT_ADMIN_ROLE.
+     *      Useful if approval was somehow consumed or needs to be reset.
      */
     function refreshVaultApproval() external onlyRole(DEFAULT_ADMIN_ROLE) {
         ASSET.forceApprove(address(TARGET_VAULT), type(uint256).max);

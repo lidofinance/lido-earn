@@ -5,6 +5,8 @@ import {VaultTestBase} from "./VaultTestBase.sol";
 import {Vault} from "src/Vault.sol";
 
 contract VaultInitializationTest is VaultTestBase {
+    /// @notice Tests that initialization.
+    /// @dev Validates that initialization.
     function test_Initialization() public view {
         assertEq(address(vault.asset()), address(asset));
         assertEq(vault.TREASURY(), treasury);
@@ -15,6 +17,8 @@ contract VaultInitializationTest is VaultTestBase {
         assertEq(vault.decimals(), assetDecimals);
     }
 
+    /// @notice Tests that initial state.
+    /// @dev Validates that initial state.
     function test_InitialState() public view {
         assertEq(vault.totalSupply(), 0);
         assertEq(vault.totalAssets(), 0);
@@ -22,6 +26,8 @@ contract VaultInitializationTest is VaultTestBase {
         assertEq(vault.balanceOf(treasury), 0);
     }
 
+    /// @notice Tests that initial roles assigned.
+    /// @dev Validates that initial roles assigned.
     function test_InitialRolesAssigned() public view {
         bytes32 adminRole = vault.DEFAULT_ADMIN_ROLE();
         bytes32 pauserRole = vault.PAUSER_ROLE();
@@ -34,15 +40,21 @@ contract VaultInitializationTest is VaultTestBase {
         assertTrue(vault.hasRole(emergencyRole, address(this)));
     }
 
+    /// @notice Tests that initial paused state.
+    /// @dev Validates that initial paused state.
     function test_InitialPausedState() public view {
         assertFalse(vault.paused());
     }
 
+    /// @notice Tests that initial reward fee and last assets.
+    /// @dev Validates that initial reward fee and last assets.
     function test_InitialRewardFeeAndLastAssets() public view {
         assertEq(vault.rewardFee(), REWARD_FEE);
         assertEq(vault.lastTotalAssets(), 0);
     }
 
+    /// @notice Tests that min first deposit constant.
+    /// @dev Validates that min first deposit constant.
     function test_MinFirstDepositConstant() public view {
         assertEq(vault.MIN_FIRST_DEPOSIT(), 1_000);
     }

@@ -4,6 +4,8 @@ pragma solidity 0.8.30;
 import "./ERC4626AdapterTestBase.sol";
 
 contract ERC4626AdapterPermitTest is ERC4626AdapterTestBase {
+    /// @notice Exercises standard permit happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_Permit_Basic() public {
         uint256 ownerPrivateKey = 0xA11CE;
         address owner = vm.addr(ownerPrivateKey);
@@ -40,6 +42,8 @@ contract ERC4626AdapterPermitTest is ERC4626AdapterTestBase {
         assertEq(vault.nonces(owner), nonce + 1);
     }
 
+    /// @notice Tests that permit withdraw after permit.
+    /// @dev Validates that permit withdraw after permit.
     function test_Permit_WithdrawAfterPermit() public {
         uint256 ownerPrivateKey = 0xA11CE;
         address owner = vm.addr(ownerPrivateKey);
@@ -82,6 +86,8 @@ contract ERC4626AdapterPermitTest is ERC4626AdapterTestBase {
         assertApproxEqAbs(bobUsdcAfter - bobUsdcBefore, withdrawAmount, 2);
     }
 
+    /// @notice Ensures permit reverts when expired.
+    /// @dev Verifies the revert protects against expired.
     function test_Permit_RevertIf_Expired() public {
         uint256 ownerPrivateKey = 0xA11CE;
         address owner = vm.addr(ownerPrivateKey);
@@ -109,6 +115,8 @@ contract ERC4626AdapterPermitTest is ERC4626AdapterTestBase {
         vault.permit(owner, bob, amount, deadline, v, r, s);
     }
 
+    /// @notice Ensures permit reverts when invalid signature.
+    /// @dev Verifies the revert protects against invalid signature.
     function test_Permit_RevertIf_InvalidSignature() public {
         uint256 ownerPrivateKey = 0xA11CE;
         address owner = vm.addr(ownerPrivateKey);
@@ -137,6 +145,8 @@ contract ERC4626AdapterPermitTest is ERC4626AdapterTestBase {
         vault.permit(owner, bob, amount, deadline, v, r, s);
     }
 
+    /// @notice Ensures permit reverts when replay attack.
+    /// @dev Verifies the revert protects against replay attack.
     function test_Permit_RevertIf_ReplayAttack() public {
         uint256 ownerPrivateKey = 0xA11CE;
         address owner = vm.addr(ownerPrivateKey);

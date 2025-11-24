@@ -7,6 +7,8 @@ import {MockVault} from "test/mocks/MockVault.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract VaultDepositTest is VaultTestBase {
+    /// @notice Exercises standard deposit happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_Deposit_Basic() public {
         uint256 depositAmount = 10_000e6;
         uint256 expectedShares = depositAmount * 10 ** vault.OFFSET();
@@ -20,6 +22,8 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(vault.totalAssets(), depositAmount);
     }
 
+    /// @notice Exercises fuzzed deposit happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function testFuzz_Deposit_Basic(uint96 depositAmount) public {
         depositAmount = uint96(bound(depositAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2));
         uint256 expectedShares = depositAmount * 10 ** vault.OFFSET();
@@ -34,6 +38,8 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(vault.totalAssets(), depositAmount);
     }
 
+    /// @notice Checks deposit emits the expected event.
+    /// @dev Verifies the emitted event data matches the scenario.
     function test_Deposit_EmitsEvent() public {
         uint256 depositAmount = 10_000e6;
         uint256 expectedShares = vault.previewDeposit(depositAmount);
@@ -45,6 +51,8 @@ contract VaultDepositTest is VaultTestBase {
         vault.deposit(depositAmount, alice);
     }
 
+    /// @notice Exercises deposit with multiple users.
+    /// @dev Verifies accounting remains correct across participants.
     function test_Deposit_MultipleUsers() public {
         vm.prank(alice);
         uint256 aliceShares = vault.deposit(50_000e6, alice);
@@ -61,6 +69,8 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(vault.totalAssets(), 80_000e6);
     }
 
+    /// @notice Fuzzes deposit with multiple users.
+    /// @dev Verifies accounting remains correct across participants.
     function testFuzz_Deposit_MultipleUsers(uint96 aliceAmount, uint96 bobAmount) public {
         aliceAmount = uint96(bound(aliceAmount, vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2));
         bobAmount = uint96(bound(bobAmount, 1, type(uint96).max / 2));
@@ -82,18 +92,24 @@ contract VaultDepositTest is VaultTestBase {
         assertApproxEqAbs(vault.totalAssets(), aliceAmount + bobAmount, 2);
     }
 
+    /// @notice Ensures deposit reverts when zero amount.
+    /// @dev Verifies the revert protects against zero amount.
     function test_Deposit_RevertIf_ZeroAmount() public {
         vm.expectRevert(Vault.ZeroAmount.selector);
         vm.prank(alice);
         vault.deposit(0, alice);
     }
 
+    /// @notice Ensures deposit reverts when zero receiver.
+    /// @dev Verifies the revert protects against zero receiver.
     function test_Deposit_RevertIf_ZeroReceiver() public {
         vm.expectRevert(Vault.ZeroAddress.selector);
         vm.prank(alice);
         vault.deposit(10_000e6, address(0));
     }
 
+    /// @notice Ensures deposit reverts when paused.
+    /// @dev Verifies the revert protects against paused.
     function test_Deposit_RevertIf_Paused() public {
         vault.pause();
 
@@ -102,6 +118,8 @@ contract VaultDepositTest is VaultTestBase {
         vault.deposit(10_000e6, alice);
     }
 
+    /// @notice Ensures first deposit reverts when too small.
+    /// @dev Verifies the revert protects against too small.
     function test_FirstDeposit_RevertIf_TooSmall() public {
         vm.expectRevert(abi.encodeWithSelector(Vault.FirstDepositTooSmall.selector, 1000, 999));
 
@@ -109,6 +127,8 @@ contract VaultDepositTest is VaultTestBase {
         vault.deposit(999, alice);
     }
 
+    /// @notice Tests that first deposit success if minimum met.
+    /// @dev Validates that first deposit success if minimum met.
     function test_FirstDeposit_SuccessIf_MinimumMet() public {
         uint256 depositAmount = 1000;
         uint256 expectedShares = depositAmount * 10 ** vault.OFFSET();
@@ -120,6 +140,8 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(vault.balanceOf(alice), shares);
     }
 
+    /// @notice Tests that second deposit can be small.
+    /// @dev Validates that second deposit can be small.
     function test_SecondDeposit_CanBeSmall() public {
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
@@ -133,6 +155,8 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(shares, expectedShares);
     }
 
+    /// @notice Exercises standard mint happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_Mint_Basic() public {
         uint256 sharesToMint = 10_000e6;
         uint256 expectedAssets = vault.previewMint(sharesToMint);
@@ -145,6 +169,8 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(vault.totalAssets(), assets);
     }
 
+    /// @notice Exercises fuzzed mint happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function testFuzz_Mint_Basic(uint96 sharesToMint) public {
         uint256 minShares = vault.MIN_FIRST_DEPOSIT() * 10 ** vault.OFFSET();
         sharesToMint = uint96(bound(sharesToMint, minShares, type(uint96).max / 2));
@@ -159,18 +185,24 @@ contract VaultDepositTest is VaultTestBase {
         assertApproxEqAbs(vault.totalAssets(), assets, 1);
     }
 
+    /// @notice Ensures mint reverts when zero shares.
+    /// @dev Verifies the revert protects against zero shares.
     function test_Mint_RevertIf_ZeroShares() public {
         vm.expectRevert(Vault.ZeroAmount.selector);
         vm.prank(alice);
         vault.mint(0, alice);
     }
 
+    /// @notice Ensures mint reverts when zero receiver.
+    /// @dev Verifies the revert protects against zero receiver.
     function test_Mint_RevertIf_ZeroReceiver() public {
         vm.expectRevert(Vault.ZeroAddress.selector);
         vm.prank(alice);
         vault.mint(10_000e6, address(0));
     }
 
+    /// @notice Ensures mint reverts when first deposit too small.
+    /// @dev Verifies the revert protects against first deposit too small.
     function test_Mint_RevertIf_FirstDepositTooSmall() public {
         uint256 sharesToMint = (vault.MIN_FIRST_DEPOSIT() - 1) * 10 ** vault.OFFSET();
         uint256 expectedAssets = vault.previewMint(sharesToMint);
@@ -183,6 +215,8 @@ contract VaultDepositTest is VaultTestBase {
         vault.mint(sharesToMint, alice);
     }
 
+    /// @notice Ensures mint reverts when paused.
+    /// @dev Verifies the revert protects against paused.
     function test_Mint_RevertIf_Paused() public {
         uint256 sharesToMint = vault.MIN_FIRST_DEPOSIT() * 10 ** vault.OFFSET();
 
@@ -193,6 +227,8 @@ contract VaultDepositTest is VaultTestBase {
         vault.mint(sharesToMint, alice);
     }
 
+    /// @notice Tests that preview deposit accurate.
+    /// @dev Validates that preview deposit accurate.
     function test_PreviewDeposit_Accurate() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -205,6 +241,8 @@ contract VaultDepositTest is VaultTestBase {
         assertEq(previewedShares, actualShares);
     }
 
+    /// @notice Tests that offset protects against inflation attack.
+    /// @dev Validates that offset protects against inflation attack.
     function test_Offset_ProtectsAgainstInflationAttack() public {
         // Alice deposits tiny amount: 1000 assets
         vm.prank(alice);
@@ -267,6 +305,8 @@ contract VaultDepositTest is VaultTestBase {
     /* ========== FUZZING TESTS ========== */
 
     // Fuzz test for successful deposit with various amounts
+    /// @notice Fuzzes that deposit success.
+    /// @dev Validates that deposit success.
     function testFuzz_Deposit_Success(uint96 depositAmount) public {
         // Bound depositAmount to avoid minFirstDeposit issues and overflow
         depositAmount = uint96(bound(depositAmount, 1000, type(uint96).max));
@@ -292,6 +332,8 @@ contract VaultDepositTest is VaultTestBase {
     }
 
     // Fuzz test for successful mint with various share amounts
+    /// @notice Fuzzes that mint success.
+    /// @dev Validates that mint success.
     function testFuzz_Mint_Success(uint96 sharesToMint) public {
         // Bound sharesToMint to avoid minFirstDeposit issues
         sharesToMint = uint96(bound(sharesToMint, 1000 * 10 ** vault.OFFSET(), type(uint96).max));
@@ -319,6 +361,8 @@ contract VaultDepositTest is VaultTestBase {
     }
 
     // Fuzz test for two sequential deposits with different users
+    /// @notice Fuzzes that deposit with existing deposits.
+    /// @dev Validates that deposit with existing deposits.
     function testFuzz_Deposit_WithExistingDeposits(uint96 firstDeposit, uint96 secondDeposit) public {
         // Bound both deposits
         firstDeposit = uint96(bound(firstDeposit, 1000, type(uint96).max / 2));
@@ -359,6 +403,8 @@ contract VaultDepositTest is VaultTestBase {
     }
 
     // Fuzz test that rounding always favors the vault on deposit
+    /// @notice Fuzzes that deposit rounding favors vault.
+    /// @dev Validates that deposit rounding favors vault.
     function testFuzz_Deposit_RoundingFavorsVault(uint96 depositAmount) public {
         // Bound depositAmount
         depositAmount = uint96(bound(depositAmount, 1000, type(uint96).max / 2));
@@ -386,6 +432,8 @@ contract VaultDepositTest is VaultTestBase {
     }
 
     // Fuzz test that rounding favors the vault on mint
+    /// @notice Fuzzes that mint rounding favors vault.
+    /// @dev Validates that mint rounding favors vault.
     function testFuzz_Mint_RoundingFavorsVault(uint96 sharesToMint) public {
         // Bound sharesToMint
         sharesToMint = uint96(bound(sharesToMint, 1000 * 10 ** vault.OFFSET(), type(uint96).max / 2));

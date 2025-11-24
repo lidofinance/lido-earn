@@ -66,7 +66,8 @@ contract VaultInvariantTest is TestConfig {
             REWARD_FEE,
             OFFSET,
             "Morpho USDC Vault",
-            "mvUSDC"
+            "mvUSDC",
+            address(this)
         );
 
         address[] memory actors = new address[](3);
@@ -91,6 +92,8 @@ contract VaultInvariantTest is TestConfig {
         vm.stopPrank();
     }
 
+    /// @notice Validates that converting assets to shares and back preserves value.
+    /// @dev Ensures ERC4626 conversion math stays lossless within the tolerated rounding threshold.
     function invariant_ConversionRoundTrip() public view {
         if (vault.totalSupply() == 0) return;
 
@@ -104,6 +107,8 @@ contract VaultInvariantTest is TestConfig {
         assertApproxEqRel(assetsBack, testAmount, 0.0001e18, "INVARIANT VIOLATION: Round-trip conversion lost >0.01%");
     }
 
+    /// @notice Checks that circulating supply equals the sum of all tracked balances.
+    /// @dev Prevents ghost shares from appearing or disappearing outside mint/burn flows.
     function invariant_TotalSupplyEqualsSumOfBalances() public view {
         uint256 totalSupply = vault.totalSupply();
 
@@ -116,6 +121,8 @@ contract VaultInvariantTest is TestConfig {
         assertEq(totalSupply, sumOfBalances, "INVARIANT VIOLATION: Total supply != sum of balances");
     }
 
+    /// @notice Ensures the vault holds assets whenever shares exist.
+    /// @dev Protects against accounting bugs where supply stays >0 but assets drained to zero.
     function invariant_VaultHasAssetsWhenHasShares() public view {
         uint256 totalAssets = vault.totalAssets();
         uint256 totalSupply = vault.totalSupply();
@@ -125,6 +132,8 @@ contract VaultInvariantTest is TestConfig {
         }
     }
 
+    /// @notice Emits contextual stats for debugging when invariants run.
+    /// @dev Prints handler counters and core vault state via console logs.
     function invariant_callSummary() public view {
         console.log("\n=== Vault Invariant Test Summary ===");
         console.log("Deposits:", handler.depositsCount());

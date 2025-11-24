@@ -35,7 +35,7 @@ contract VaultEdgeCasesTest is TestConfig {
 
     function setUp() public {
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
-        vault = new MockVault(address(asset), treasury, DEFAULT_FEE, DEFAULT_OFFSET, "Test Vault", "tvUSDC");
+        vault = new MockVault(address(asset), treasury, DEFAULT_FEE, DEFAULT_OFFSET, "Test Vault", "tvUSDC", address(this));
     }
 
     /* ========== DEPOSIT EDGE CASES ========== */
@@ -81,7 +81,8 @@ contract VaultEdgeCasesTest is TestConfig {
             DEFAULT_FEE,
             23, // MAX_OFFSET
             "Test Vault Max",
-            "tvMAX"
+            "tvMAX",
+            address(this)
         );
 
         // First deposit with large amount to initialize
@@ -192,7 +193,8 @@ contract VaultEdgeCasesTest is TestConfig {
             DEFAULT_FEE,
             23, // MAX_OFFSET
             "Test Vault Max",
-            "tvMAX"
+            "tvMAX",
+            address(this)
         );
 
         // Large initial deposit

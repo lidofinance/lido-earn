@@ -21,6 +21,8 @@ contract SolvencyTest is ERC4626AdapterTestBase {
         }
     }
 
+    /// @notice Runs randomized deposit/withdraw cycles with periodic profits to ensure solvency holds.
+    /// @dev Verifies total assets track net deposits plus profit and that users and treasury can fully redeem leaving zero balance.
     function test_Solvency_WithRandomCycles() public {
         uint256 numCycles = 100;
         uint256 totalProfit = 0;
@@ -96,6 +98,8 @@ contract SolvencyTest is ERC4626AdapterTestBase {
         assertEq(finalVaultAssets, 0);
     }
 
+    /// @notice Exercises an end-to-end emergency withdraw + recovery cycle for many users.
+    /// @dev Verifies recovery snapshots distribute funds pro-rata, treasury can claim, and vault ends with zero supply/balance.
     function test_EmergencySolvency_AllUsersRedeemVaultEmpty() public {
         uint256 totalDeposited = 0;
         for (uint256 i = 0; i < EMERGENCY_TEST_USERS; i++) {

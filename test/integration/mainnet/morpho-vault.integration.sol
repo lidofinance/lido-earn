@@ -33,7 +33,7 @@ contract MorphoVaultIntegrationTest is Test {
 
     function _deployVault(VaultTestConfig memory config) internal {
         vault = new ERC4626Adapter(
-            config.token, config.targetVault, treasury, config.rewardFee, config.offset, config.name, config.symbol
+            config.token, config.targetVault, treasury, config.rewardFee, config.offset, config.name, config.symbol, address(this)
         );
 
         vault.grantRole(vault.EMERGENCY_ROLE(), emergencyAdmin);
@@ -78,6 +78,8 @@ contract MorphoVaultIntegrationTest is Test {
         assets = vault.emergencyRedeem(shares, user, user);
     }
 
+    /// @notice Executes a full deposit, profit, withdrawal, and emergency cycle against each configured mainnet vault.
+    /// @dev Verifies live integrations handle deposits, profit accounting, emergency withdraw, and recovery redemption without balance drift.
     function test_FullEmergencyCycle_AllVaults() public {
         _forkMainnet();
 

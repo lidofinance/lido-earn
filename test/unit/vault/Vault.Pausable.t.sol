@@ -7,12 +7,16 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract VaultPausableTest is VaultTestBase {
+    /// @notice Exercises standard pause happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_Pause_Basic() public {
         vault.pause();
 
         assertTrue(vault.paused());
     }
 
+    /// @notice Ensures pause reverts when not pauser.
+    /// @dev Verifies the revert protects against not pauser.
     function test_Pause_RevertIf_NotPauser() public {
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, vault.PAUSER_ROLE())
@@ -21,6 +25,8 @@ contract VaultPausableTest is VaultTestBase {
         vault.pause();
     }
 
+    /// @notice Tests that pause with pauser role.
+    /// @dev Validates that pause with pauser role.
     function test_Pause_WithPauserRole() public {
         address pauser = makeAddr("pauser");
         vault.grantRole(vault.PAUSER_ROLE(), pauser);
@@ -31,6 +37,8 @@ contract VaultPausableTest is VaultTestBase {
         assertTrue(vault.paused());
     }
 
+    /// @notice Exercises standard unpause happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_Unpause_Basic() public {
         vault.pause();
         assertTrue(vault.paused());
@@ -39,17 +47,23 @@ contract VaultPausableTest is VaultTestBase {
         assertFalse(vault.paused());
     }
 
+    /// @notice Ensures pause reverts when already paused.
+    /// @dev Verifies the revert protects against already paused.
     function test_Pause_RevertIf_AlreadyPaused() public {
         vault.pause();
         vm.expectRevert(Pausable.EnforcedPause.selector);
         vault.pause();
     }
 
+    /// @notice Ensures unpause reverts when not paused.
+    /// @dev Verifies the revert protects against not paused.
     function test_Unpause_RevertIf_NotPaused() public {
         vm.expectRevert(Pausable.ExpectedPause.selector);
         vault.unpause();
     }
 
+    /// @notice Ensures unpause reverts when not pauser.
+    /// @dev Verifies the revert protects against not pauser.
     function test_Unpause_RevertIf_NotPauser() public {
         vault.pause();
 
@@ -60,6 +74,8 @@ contract VaultPausableTest is VaultTestBase {
         vault.unpause();
     }
 
+    /// @notice Tests that pause blocks deposit.
+    /// @dev Validates that pause blocks deposit.
     function test_Pause_BlocksDeposit() public {
         vault.pause();
 
@@ -68,6 +84,8 @@ contract VaultPausableTest is VaultTestBase {
         vault.deposit(10_000e6, alice);
     }
 
+    /// @notice Tests that pause blocks mint.
+    /// @dev Validates that pause blocks mint.
     function test_Pause_BlocksMint() public {
         vault.pause();
 
@@ -76,6 +94,8 @@ contract VaultPausableTest is VaultTestBase {
         vault.mint(10_000e6, alice);
     }
 
+    /// @notice Tests that pause allows withdraw.
+    /// @dev Validates that pause allows withdraw.
     function test_Pause_AllowsWithdraw() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -91,6 +111,8 @@ contract VaultPausableTest is VaultTestBase {
         assertEq(aliceBalanceAfter - aliceBalanceBefore, 10_000e6);
     }
 
+    /// @notice Tests that pause allows redeem.
+    /// @dev Validates that pause allows redeem.
     function test_Pause_AllowsRedeem() public {
         vm.prank(alice);
         uint256 shares = vault.deposit(100_000e6, alice);
@@ -107,6 +129,8 @@ contract VaultPausableTest is VaultTestBase {
         assertGt(assets, 0);
     }
 
+    /// @notice Tests that unpause allows operations.
+    /// @dev Validates that unpause allows operations.
     function test_Unpause_AllowsOperations() public {
         vault.pause();
         vault.unpause();
@@ -119,6 +143,8 @@ contract VaultPausableTest is VaultTestBase {
         assertEq(shares, expectedShares);
     }
 
+    /// @notice Tests that pause does not block views.
+    /// @dev Validates that pause does not block views.
     function test_Pause_DoesNotBlockViews() public {
         vm.prank(alice);
         uint256 shares = vault.deposit(100_000e6, alice);
@@ -130,16 +156,22 @@ contract VaultPausableTest is VaultTestBase {
         assertEq(vault.previewWithdraw(10_000e6), vault.convertToShares(10_000e6));
     }
 
+    /// @notice Tests that pause does not block preview deposit.
+    /// @dev Validates that pause does not block preview deposit.
     function test_Pause_DoesNotBlockPreviewDeposit() public {
         vault.pause();
         uint256 previewShares = vault.previewDeposit(10_000e6);
         assertGt(previewShares, 0);
     }
 
+    /// @notice Tests that max deposit positive when unpaused.
+    /// @dev Validates that max deposit positive when unpaused.
     function test_MaxDepositPositiveWhenUnpaused() public view {
         assertEq(vault.maxDeposit(alice), type(uint256).max);
     }
 
+    /// @notice Tests that pause multiple times different pausers.
+    /// @dev Validates that pause multiple times different pausers.
     function test_Pause_MultipleTimesDifferentPausers() public {
         address pauser1 = makeAddr("pauser1");
         address pauser2 = makeAddr("pauser2");

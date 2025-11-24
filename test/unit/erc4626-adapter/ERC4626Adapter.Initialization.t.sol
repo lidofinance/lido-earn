@@ -4,6 +4,8 @@ pragma solidity 0.8.30;
 import "./ERC4626AdapterTestBase.sol";
 
 contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
+    /// @notice Tests that initialization.
+    /// @dev Validates that initialization.
     function test_Initialization() public view {
         assertEq(address(vault.ASSET()), address(usdc));
         assertEq(address(vault.TARGET_VAULT()), address(targetVault));
@@ -15,6 +17,8 @@ contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
         assertEq(vault.decimals(), assetDecimals);
     }
 
+    /// @notice Tests that initial state.
+    /// @dev Validates that initial state.
     function test_InitialState() public view {
         assertEq(vault.totalSupply(), 0);
         assertEq(vault.totalAssets(), 0);
@@ -22,14 +26,20 @@ contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
         assertEq(vault.balanceOf(treasury), 0);
     }
 
+    /// @notice Tests that target vault approval setup.
+    /// @dev Validates that target vault approval setup.
     function test_TargetVaultApprovalSetup() public view {
         assertEq(usdc.allowance(address(vault), address(targetVault)), type(uint256).max);
     }
 
+    /// @notice Tests that offset initial value.
+    /// @dev Validates that offset initial value.
     function test_Offset_InitialValue() public view {
         assertEq(vault.OFFSET(), OFFSET);
     }
 
+    /// @notice Tests that offset protects against inflation attack.
+    /// @dev Validates that offset protects against inflation attack.
     function test_Offset_ProtectsAgainstInflationAttack() public {
         vm.prank(alice);
         vault.deposit(1000, alice);
@@ -42,6 +52,8 @@ contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
         assertGt(victimShares, 0);
     }
 
+    /// @notice Fuzzes that total assets reflects target vault balance.
+    /// @dev Validates that total assets reflects target vault balance.
     function testFuzz_TotalAssets_ReflectsTargetVaultBalance(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -56,6 +68,8 @@ contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
         assertEq(vaultTotalAssets, targetAssets);
     }
 
+    /// @notice Fuzzes that max withdraw.
+    /// @dev Validates that max withdraw.
     function testFuzz_MaxWithdraw(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -68,6 +82,8 @@ contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
         assertApproxEqAbs(maxWithdraw, amount, 1);
     }
 
+    /// @notice Fuzzes that deposit withdraw rounding does not cause loss.
+    /// @dev Validates that deposit withdraw rounding does not cause loss.
     function testFuzz_DepositWithdraw_RoundingDoesNotCauseLoss(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -86,6 +102,8 @@ contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
         assertApproxEqAbs(balanceAfter, balanceBefore, 2);
     }
 
+    /// @notice Tests that multiple deposits withdraws maintains accounting.
+    /// @dev Validates that multiple deposits withdraws maintains accounting.
     function test_MultipleDepositsWithdraws_MaintainsAccounting() public {
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(alice);

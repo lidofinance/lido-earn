@@ -9,6 +9,8 @@ import {Vault} from "src/Vault.sol";
 contract VaultFeesTest is VaultTestBase {
     /* ========== HARVEST FEES TESTS ========== */
 
+    /// @notice Tests that harvest fees with profit.
+    /// @dev Validates that harvest fees with profit.
     function test_HarvestFees_WithProfit() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -32,6 +34,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfter, expectedShares);
     }
 
+    /// @notice Checks harvest fees emits the expected event.
+    /// @dev Verifies the emitted event data matches the scenario.
     function test_HarvestFees_EmitsEvent() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -55,6 +59,8 @@ contract VaultFeesTest is VaultTestBase {
         assertTrue(foundFeesHarvestedEvent);
     }
 
+    /// @notice Tests that harvest fees no profit.
+    /// @dev Validates that harvest fees no profit.
     function test_HarvestFees_NoProfit() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -71,6 +77,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(lastTotalAssetsAfter, lastTotalAssetsBefore);
     }
 
+    /// @notice Tests that harvest fees with loss.
+    /// @dev Validates that harvest fees with loss.
     function test_HarvestFees_WithLoss() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -87,6 +95,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfter, treasurySharesBefore);
     }
 
+    /// @notice Tests that harvest fees updates last total assets.
+    /// @dev Validates that harvest fees updates last total assets.
     function test_HarvestFees_UpdatesLastTotalAssets() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -102,6 +112,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(lastTotalAssetsAfter, totalAssetsBefore);
     }
 
+    /// @notice Tests that harvest fees when total supply is zero.
+    /// @dev Validates that harvest fees when total supply is zero.
     function test_HarvestFees_WhenTotalSupplyIsZero() public {
         assertEq(vault.totalSupply(), 0);
 
@@ -114,6 +126,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(lastTotalAssetsAfter, lastTotalAssetsBefore);
     }
 
+    /// @notice Tests that harvest fees when total assets is zero.
+    /// @dev Validates that harvest fees when total assets is zero.
     function test_HarvestFees_WhenTotalAssetsIsZero() public {
         assertEq(vault.totalAssets(), 0);
 
@@ -122,6 +136,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(vault.lastTotalAssets(), 0);
     }
 
+    /// @notice Tests that harvest fees multiple harvests.
+    /// @dev Validates that harvest fees multiple harvests.
     function test_HarvestFees_MultipleHarvests() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -147,6 +163,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfterSecond, expectedFirstShares + expectedSecondShares);
     }
 
+    /// @notice Tests that harvest fees called automatically on deposit.
+    /// @dev Validates that harvest fees called automatically on deposit.
     function test_HarvestFees_CalledAutomaticallyOnDeposit() public {
         vm.prank(alice);
         vault.deposit(50_000e6, alice);
@@ -167,6 +185,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfter, expectedShares);
     }
 
+    /// @notice Tests that harvest fees called automatically on withdraw.
+    /// @dev Validates that harvest fees called automatically on withdraw.
     function test_HarvestFees_CalledAutomaticallyOnWithdraw() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -187,6 +207,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfter, expectedShares);
     }
 
+    /// @notice Tests that harvest fees called automatically on mint.
+    /// @dev Validates that harvest fees called automatically on mint.
     function test_HarvestFees_CalledAutomaticallyOnMint() public {
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
@@ -208,6 +230,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfter, expectedShares);
     }
 
+    /// @notice Tests that harvest fees called automatically on redeem.
+    /// @dev Validates that harvest fees called automatically on redeem.
     function test_HarvestFees_CalledAutomaticallyOnRedeem() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -230,6 +254,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfter, expectedShares);
     }
 
+    /// @notice Tests that harvest fees calculates correct fee amount.
+    /// @dev Validates that harvest fees calculates correct fee amount.
     function test_HarvestFees_CalculatesCorrectFeeAmount() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -247,6 +273,8 @@ contract VaultFeesTest is VaultTestBase {
         assertApproxEqAbs(treasuryAssets, expectedFeeAmount, 2);
     }
 
+    /// @notice Tests that harvest fees with zero fee.
+    /// @dev Validates that harvest fees with zero fee.
     function test_HarvestFees_WithZeroFee() public {
         vault.setRewardFee(0);
 
@@ -264,6 +292,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(treasurySharesAfter, treasurySharesBefore);
     }
 
+    /// @notice Tests that harvest fees with max fee.
+    /// @dev Validates that harvest fees with max fee.
     function test_HarvestFees_WithMaxFee() public {
         vault.setRewardFee(2000);
 
@@ -283,6 +313,8 @@ contract VaultFeesTest is VaultTestBase {
         assertApproxEqAbs(treasuryAssets, expectedFeeAmount, 2);
     }
 
+    /// @notice Tests that get pending fees with profit.
+    /// @dev Validates that get pending fees with profit.
     function test_GetPendingFees_WithProfit() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -296,6 +328,8 @@ contract VaultFeesTest is VaultTestBase {
         assertApproxEqAbs(pendingFees, expectedFeeAmount, 1);
     }
 
+    /// @notice Tests that get pending fees no profit.
+    /// @dev Validates that get pending fees no profit.
     function test_GetPendingFees_NoProfit() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -305,6 +339,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(pendingFees, 0);
     }
 
+    /// @notice Tests that get pending fees with loss.
+    /// @dev Validates that get pending fees with loss.
     function test_GetPendingFees_WithLoss() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -317,6 +353,8 @@ contract VaultFeesTest is VaultTestBase {
         assertEq(pendingFees, 0);
     }
 
+    /// @notice Tests that get pending fees after harvest.
+    /// @dev Validates that get pending fees after harvest.
     function test_GetPendingFees_AfterHarvest() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -337,6 +375,8 @@ contract VaultFeesTest is VaultTestBase {
     /* ========== FUZZING TESTS ========== */
 
     // Fuzz test for fee harvesting with various profit amounts
+    /// @notice Fuzzes that harvest fees with profit.
+    /// @dev Validates that harvest fees with profit.
     function testFuzz_HarvestFees_WithProfit(uint96 initialDeposit, uint96 profit) public {
         // Bound values to avoid overflow - keep amounts reasonable
         // Use smaller max to avoid overflow in calculations
@@ -376,6 +416,8 @@ contract VaultFeesTest is VaultTestBase {
     }
 
     // Fuzz test for different reward fee rates
+    /// @notice Fuzzes that harvest fees different reward rates.
+    /// @dev Validates that harvest fees different reward rates.
     function testFuzz_HarvestFees_DifferentRewardRates(uint96 depositAmount, uint16 feeRate) public {
         // Bound values
         depositAmount = uint96(bound(depositAmount, 10_000e6, type(uint96).max / 2));
@@ -416,6 +458,8 @@ contract VaultFeesTest is VaultTestBase {
     }
 
     // Fuzz test for multiple sequential harvests
+    /// @notice Fuzzes that harvest fees multiple harvests.
+    /// @dev Validates that harvest fees multiple harvests.
     function testFuzz_HarvestFees_MultipleHarvests(uint96 deposit, uint96 profit1, uint96 profit2) public {
         // Bound values to keep them reasonable - use smaller max to avoid overflow
         deposit = uint96(bound(deposit, 100_000e6, type(uint64).max));
@@ -467,6 +511,8 @@ contract VaultFeesTest is VaultTestBase {
     }
 
     // Fuzz test that no fees are harvested when rewardFee is zero
+    /// @notice Fuzzes that harvest fees no fee when zero reward fee.
+    /// @dev Validates that harvest fees no fee when zero reward fee.
     function testFuzz_HarvestFees_NoFeeWhenZeroRewardFee(uint96 depositAmount, uint96 profit) public {
         // Bound values to avoid overflow
         depositAmount = uint96(bound(depositAmount, 10_000e6, type(uint96).max / 2));

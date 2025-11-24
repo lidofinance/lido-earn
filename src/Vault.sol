@@ -171,6 +171,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @param offset_ Decimals offset for share inflation protection (max 23)
      * @param name_ ERC20 name for vault shares
      * @param symbol_ ERC20 symbol for vault shares
+     * @param admin_ Address that will receive all roles (admin, pauser, fee manager, emergency)
      */
     constructor(
         IERC20 asset_,
@@ -178,10 +179,12 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint16 rewardFee_,
         uint8 offset_,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        address admin_
     ) ERC4626(asset_) ERC20(name_, symbol_) ERC20Permit(name_) {
         if (address(asset_) == address(0)) revert ZeroAddress();
         if (treasury_ == address(0)) revert ZeroAddress();
+        if (admin_ == address(0)) revert ZeroAddress();
         if (rewardFee_ > MAX_REWARD_FEE_BASIS_POINTS) {
             revert InvalidFee(rewardFee_);
         }
@@ -192,10 +195,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         rewardFee = rewardFee_;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender);
-        _grantRole(MANAGER_ROLE, msg.sender);
-        _grantRole(EMERGENCY_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
+        _grantRole(PAUSER_ROLE, admin_);
+        _grantRole(MANAGER_ROLE, admin_);
+        _grantRole(EMERGENCY_ROLE, admin_);
     }
 
     /* ========== ERC4626 OVERRIDES ========== */
@@ -441,9 +444,9 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @dev Simulates fee calculation without state changes. Used by maxWithdraw and _harvestFees.
      * @param currentTotal Current total assets in the vault
      * @param supply Current total supply of vault shares
-     * @return Number of shares that would be minted as fees
+     * @return feeShares Number of shares that would be minted as fees
      */
-    function _calculateFeeShares(uint256 currentTotal, uint256 supply) internal view returns (uint256) {
+    function _calculateFeeShares(uint256 currentTotal, uint256 supply) internal view returns (uint256 feeShares) {
         if (currentTotal <= lastTotalAssets || rewardFee == 0 || supply == 0) {
             return 0;
         }

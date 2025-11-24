@@ -35,6 +35,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
     /* ========== EMERGENCY WITHDRAW TESTS ========== */
 
+    /// @notice Fuzzes that emergency withdraw first call activates emergency mode.
+    /// @dev Validates that emergency withdraw first call activates emergency mode.
     function testFuzz_EmergencyWithdraw_FirstCall_ActivatesEmergencyMode(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -56,6 +58,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertTrue(vault.emergencyMode());
     }
 
+    /// @notice Exercises standard activate emergency mode happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_activateEmergencyMode_HappyPath() public {
         uint256 amount = scaleAmount(1_000_000);
         usdc.mint(alice, amount);
@@ -78,6 +82,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.emergencyTotalAssets(), expectedEmergencyAssets);
     }
 
+    /// @notice Tests that activate emergency mode reverts if already active.
+    /// @dev Validates that activate emergency mode reverts if already active.
     function test_activateEmergencyMode_RevertsIfAlreadyActive() public {
         uint256 amount = scaleAmount(1_000_000);
         usdc.mint(alice, amount);
@@ -93,6 +99,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.activateEmergencyMode();
     }
 
+    /// @notice Fuzzes that emergency withdraw recovers all funds.
+    /// @dev Validates that emergency withdraw recovers all funds.
     function testFuzz_EmergencyWithdraw_RecoversAllFunds(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -111,6 +119,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertApproxEqAbs(usdc.balanceOf(address(vault)), amount, 2);
     }
 
+    /// @notice Fuzzes emergency withdraw with multiple users.
+    /// @dev Verifies accounting remains correct across participants.
     function testFuzz_EmergencyWithdraw_MultipleUsers_RecoversTotalAssets(
         uint96 aliceAmount,
         uint96 bobAmount,
@@ -142,6 +152,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.getProtocolBalance(), 0);
     }
 
+    /// @notice Fuzzes that emergency withdraw multiple calls accumulate.
+    /// @dev Validates that emergency withdraw multiple calls accumulate.
     function testFuzz_EmergencyWithdraw_MultipleCallsAccumulate(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount * 2);
@@ -166,6 +178,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.getProtocolBalance(), 0);
     }
 
+    /// @notice Fuzzes that emergency withdraw emits correct event.
+    /// @dev Validates that emergency withdraw emits correct event.
     function testFuzz_EmergencyWithdraw_EmitsCorrectEvent(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -184,6 +198,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertApproxEqAbs(actualRecovered, expectedRecovered, 2);
     }
 
+    /// @notice Fuzzes that emergency withdraw reverts when not emergency role.
+    /// @dev Verifies the revert protects against not emergency role.
     function testFuzz_EmergencyWithdraw_RevertIf_NotEmergencyRole(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -196,6 +212,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.emergencyWithdraw();
     }
 
+    /// @notice Fuzzes that emergency withdraw reverts when after recovery activated.
+    /// @dev Verifies the revert protects against after recovery activated.
     function testFuzz_EmergencyWithdraw_RevertIf_AfterRecoveryActivated(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -214,6 +232,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.emergencyWithdraw();
     }
 
+    /// @notice Fuzzes that emergency withdraw second call does not pause again.
+    /// @dev Validates that emergency withdraw second call does not pause again.
     function testFuzz_EmergencyWithdraw_SecondCallDoesNotPauseAgain(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount * 2);
@@ -239,6 +259,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
     /* ========== ACTIVATE EMERGENCY RECOVERY TESTS ========== */
 
+    /// @notice Fuzzes that activate recovery snapshots correctly.
+    /// @dev Validates that activate recovery snapshots correctly.
     function testFuzz_activateRecovery_SnapshotsCorrectly(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -260,6 +282,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertTrue(vault.recoveryMode());
     }
 
+    /// @notice Fuzzes that activate recovery harvests fees before snapshot.
+    /// @dev Validates that activate recovery harvests fees before snapshot.
     function testFuzz_activateRecovery_HarvestsFeesBeforeSnapshot(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
@@ -281,6 +305,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.balanceOf(treasury), vault.totalSupply() - totalSupplyBefore);
     }
 
+    /// @notice Fuzzes activate recovery emits the expected event.
+    /// @dev Verifies the emitted event data matches the scenario.
     function testFuzz_activateRecovery_EmitsEvent(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -306,6 +332,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.recoverySupply(), totalSupply);
     }
 
+    /// @notice Fuzzes that activate recovery reverts when amount mismatch too high.
+    /// @dev Verifies the revert protects against amount mismatch too high.
     function testFuzz_activateRecovery_RevertIf_AmountMismatch_TooHigh(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
@@ -326,6 +354,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.activateRecovery(declaredAmount);
     }
 
+    /// @notice Fuzzes that activate recovery reverts when amount mismatch too low.
+    /// @dev Verifies the revert protects against amount mismatch too low.
     function testFuzz_activateRecovery_RevertIf_AmountMismatch_TooLow(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
@@ -347,6 +377,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.activateRecovery(declaredAmount);
     }
 
+    /// @notice Fuzzes that activate recovery allows partial recovery.
+    /// @dev Validates that activate recovery allows partial recovery.
     function testFuzz_activateRecovery_AllowsPartialRecovery(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT() * 10, type(uint96).max);
         usdc.mint(alice, amount);
@@ -373,6 +405,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.recoveryAssets(), vaultBalance);
     }
 
+    /// @notice Fuzzes that activate recovery reverts when already active.
+    /// @dev Verifies the revert protects against already active.
     function testFuzz_activateRecovery_RevertIf_AlreadyActive(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -393,6 +427,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.activateRecovery(vaultBalance);
     }
 
+    /// @notice Fuzzes that activate recovery reverts when emergency mode not active.
+    /// @dev Verifies the revert protects against emergency mode not active.
     function testFuzz_activateRecovery_RevertIf_EmergencyModeNotActive(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -415,6 +451,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertGt(vault.getProtocolBalance(), 0, "Funds should still be in protocol");
     }
 
+    /// @notice Fuzzes that activate recovery reverts when zero vault balance.
+    /// @dev Verifies the revert protects against zero vault balance.
     function testFuzz_activateRecovery_RevertIf_ZeroVaultBalance() public {
         uint256 depositAmount = 1000e6;
         usdc.mint(alice, depositAmount);
@@ -436,6 +474,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.activateRecovery(0);
     }
 
+    /// @notice Fuzzes that activate recovery reverts when not emergency role.
+    /// @dev Verifies the revert protects against not emergency role.
     function testFuzz_activateRecovery_RevertIf_NotEmergencyRole(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -455,6 +495,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
     /* ========== EMERGENCY REDEEM TESTS ========== */
 
+    /// @notice Fuzzes that emergency redeem pro rata distribution.
+    /// @dev Validates that emergency redeem pro rata distribution.
     function testFuzz_EmergencyRedeem_ProRataDistribution(uint96 depositAmount, uint96 sharesToRedeem) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -485,6 +527,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.balanceOf(alice), shares - redeemShares);
     }
 
+    /// @notice Fuzzes emergency redeem with multiple users.
+    /// @dev Verifies accounting remains correct across participants.
     function testFuzz_EmergencyRedeem_MultipleUsers_FairDistribution(
         uint96 aliceAmount,
         uint96 bobAmount,
@@ -547,6 +591,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.totalSupply(), 0);
     }
 
+    /// @notice Fuzzes that emergency redeem claim order does not matter.
+    /// @dev Validates that emergency redeem claim order does not matter.
     function testFuzz_EmergencyRedeem_ClaimOrderDoesNotMatter(uint96 aliceAmount, uint96 bobAmount) public {
         uint256 aliceDeposit = bound(uint256(aliceAmount), vault.MIN_FIRST_DEPOSIT(), type(uint80).max);
         uint256 bobDeposit = bound(uint256(bobAmount), 1, type(uint80).max);
@@ -591,6 +637,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.totalSupply(), 0);
     }
 
+    /// @notice Fuzzes that emergency redeem partial redeem.
+    /// @dev Validates that emergency redeem partial redeem.
     function testFuzz_EmergencyRedeem_PartialRedeem(uint96 depositAmount, uint96 redeemPortion) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -628,6 +676,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertGt(firstRedeem + secondRedeem, 0);
     }
 
+    /// @notice Fuzzes that emergency redeem burns shares correctly.
+    /// @dev Validates that emergency redeem burns shares correctly.
     function testFuzz_EmergencyRedeem_BurnsSharesCorrectly(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -650,6 +700,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.balanceOf(alice), 0);
     }
 
+    /// @notice Fuzzes that emergency redeem with approval.
+    /// @dev Validates that emergency redeem with approval.
     function testFuzz_EmergencyRedeem_WithApproval(uint96 depositAmount, uint96 sharesToRedeem) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -683,6 +735,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.allowance(alice, bob), 0);
     }
 
+    /// @notice Fuzzes that emergency redeem reverts when recovery not active.
+    /// @dev Verifies the revert protects against recovery not active.
     function testFuzz_EmergencyRedeem_RevertIf_RecoveryNotActive(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -695,6 +749,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.emergencyRedeem(shares, alice, alice);
     }
 
+    /// @notice Fuzzes that emergency redeem reverts when zero shares.
+    /// @dev Verifies the revert protects against zero shares.
     function testFuzz_EmergencyRedeem_RevertIf_ZeroShares(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -713,6 +769,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.emergencyRedeem(0, alice, alice);
     }
 
+    /// @notice Fuzzes that emergency redeem reverts when zero receiver.
+    /// @dev Verifies the revert protects against zero receiver.
     function testFuzz_EmergencyRedeem_RevertIf_ZeroReceiver(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -731,6 +789,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.emergencyRedeem(shares, address(0), alice);
     }
 
+    /// @notice Fuzzes that emergency redeem reverts when insufficient shares.
+    /// @dev Verifies the revert protects against insufficient shares.
     function testFuzz_EmergencyRedeem_RevertIf_InsufficientShares(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -751,6 +811,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.emergencyRedeem(requestShares, alice, alice);
     }
 
+    /// @notice Fuzzes that emergency redeem reverts when no approval.
+    /// @dev Verifies the revert protects against no approval.
     function testFuzz_EmergencyRedeem_RevertIf_NoApproval(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -771,6 +833,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
     /* ========== BLOCKED OPERATIONS DURING EMERGENCY TESTS ========== */
 
+    /// @notice Fuzzes that withdraw reverts when emergency mode.
+    /// @dev Verifies the revert protects against emergency mode.
     function testFuzz_Withdraw_RevertIf_EmergencyMode(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -788,6 +852,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.withdraw(amount / 2, alice, alice);
     }
 
+    /// @notice Fuzzes that redeem reverts when emergency mode.
+    /// @dev Verifies the revert protects against emergency mode.
     function testFuzz_Redeem_RevertIf_EmergencyMode(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -805,6 +871,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.redeem(shares / 2, alice, alice);
     }
 
+    /// @notice Fuzzes that deposit reverts when emergency mode.
+    /// @dev Verifies the revert protects against emergency mode.
     function testFuzz_Deposit_RevertIf_EmergencyMode(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
@@ -823,6 +891,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.deposit(amount, bob);
     }
 
+    /// @notice Fuzzes that mint reverts when emergency mode.
+    /// @dev Verifies the revert protects against emergency mode.
     function testFuzz_Mint_RevertIf_EmergencyMode(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
@@ -843,6 +913,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
     /* ========== EDGE CASE TESTS ========== */
 
+    /// @notice Fuzzes that emergency redeem rounding does not benefit user.
+    /// @dev Validates that emergency redeem rounding does not benefit user.
     function testFuzz_EmergencyRedeem_RoundingDoesNotBenefitUser(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -864,6 +936,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(receivedAssets, expectedAssets);
     }
 
+    /// @notice Tests that emergency redeem minimal shares.
+    /// @dev Validates that emergency redeem minimal shares.
     function test_EmergencyRedeem_MinimalShares() public {
         uint256 amount = 1_000_000e6;
         usdc.mint(alice, amount);
@@ -885,6 +959,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertGt(assets, 0);
     }
 
+    /// @notice Ensures emergency redeem reverts when assets round to zero.
+    /// @dev Verifies the revert protects against assets round to zero.
     function test_EmergencyRedeem_RevertIf_AssetsRoundToZero() public {
         uint256 amount = vault.MIN_FIRST_DEPOSIT();
         usdc.mint(alice, amount);
@@ -911,6 +987,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.emergencyRedeem(tinyShares, alice, alice);
     }
 
+    /// @notice Fuzzes that emergency mode total assets reflects vault balance.
+    /// @dev Validates that emergency mode total assets reflects vault balance.
     function testFuzz_EmergencyMode_TotalAssets_ReflectsVaultBalance(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -927,6 +1005,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertApproxEqAbs(totalAssets, vaultBalance, 2);
     }
 
+    /// @notice Ensures activate recovery reverts when zero supply.
+    /// @dev Verifies the revert protects against zero supply.
     function test_activateRecovery_RevertIf_ZeroSupply() public {
         // Mint tokens directly to vault (no shares minted)
         uint256 directMint = 1000;
@@ -946,6 +1026,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.activateRecovery(directMint);
     }
 
+    /// @notice Fuzzes that activate recovery with partial recovery.
+    /// @dev Validates that activate recovery with partial recovery.
     function testFuzz_activateRecovery_WithPartialRecovery(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT() * 10, type(uint96).max);
         usdc.mint(alice, amount);
@@ -974,6 +1056,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertApproxEqAbs(vault.recoveryAssets(), amount, 2);
     }
 
+    /// @notice Fuzzes that dust sweep after all shares redeemed.
+    /// @dev Validates that dust sweep after all shares redeemed.
     function testFuzz_DustSweep_AfterAllSharesRedeemed(uint96 depositAmount, uint96 dustAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -1007,12 +1091,16 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(usdc.balanceOf(address(vault)), 0);
     }
 
+    /// @notice Ensures dust sweep reverts when not active.
+    /// @dev Verifies the revert protects against not active.
     function test_DustSweep_RevertIf_NotActive() public {
         vm.expectRevert(EmergencyVault.RecoveryNotActive.selector);
         vm.prank(emergencyAdmin);
         vault.sweepDust(treasury);
     }
 
+    /// @notice Fuzzes that dust sweep reverts when shares remain.
+    /// @dev Verifies the revert protects against shares remain.
     function testFuzz_DustSweep_RevertIf_SharesRemain(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -1031,6 +1119,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.sweepDust(treasury);
     }
 
+    /// @notice Fuzzes that dust sweep reverts when no balance.
+    /// @dev Verifies the revert protects against no balance.
     function testFuzz_DustSweep_RevertIf_NoBalance(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -1054,6 +1144,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.sweepDust(treasury);
     }
 
+    /// @notice Fuzzes that dust sweep reverts when zero recipient.
+    /// @dev Verifies the revert protects against zero recipient.
     function testFuzz_DustSweep_RevertIf_ZeroRecipient(uint96 depositAmount, uint96 dustAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max);
         usdc.mint(alice, amount);
@@ -1080,6 +1172,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
     /* ========== IMPLICIT LOSS TRACKING TESTS ========== */
 
+    /// @notice Tests that activate recovery tracks implicit loss with share price decline.
+    /// @dev Validates that activate recovery tracks implicit loss with share price decline.
     function test_activateRecovery_TracksImplicitLoss_WithSharePriceDecline() public {
         // Deposit funds
         uint256 amount = vault.MIN_FIRST_DEPOSIT() * 1000;
@@ -1114,6 +1208,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vault.activateRecovery(remainingBalance);
     }
 
+    /// @notice Tests that activate recovery tracks implicit loss with partial withdrawal.
+    /// @dev Validates that activate recovery tracks implicit loss with partial withdrawal.
     function test_activateRecovery_TracksImplicitLoss_WithPartialWithdrawal() public {
         // Deposit funds
         uint256 amount = vault.MIN_FIRST_DEPOSIT() * 1000;

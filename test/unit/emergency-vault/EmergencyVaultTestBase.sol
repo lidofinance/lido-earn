@@ -32,7 +32,7 @@ abstract contract EmergencyVaultTestBase is Test, TestConfig {
         targetVault = new MockERC4626Vault(usdc, "Mock Yield Vault", "yUSDC", OFFSET);
 
         vault =
-            new ERC4626Adapter(address(usdc), address(targetVault), treasury, FEE_BPS, OFFSET, "Lido Earn Vault", "LEV");
+            new ERC4626Adapter(address(usdc), address(targetVault), treasury, FEE_BPS, OFFSET, "Lido Earn Vault", "LEV", address(this));
 
         uint256 initialBalance = scaleAmount(INITIAL_BALANCE);
         usdc.mint(alice, initialBalance);

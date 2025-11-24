@@ -54,7 +54,8 @@ contract RewardDistributionIntegrationTest is TestConfig {
             REWARD_FEE_BASIS_POINTS,
             OFFSET,
             "Lido ERC4626 Vault",
-            "lido4626"
+            "lido4626",
+            address(this)
         );
 
         usdc.mint(alice, INITIAL_BALANCE);
@@ -85,6 +86,8 @@ contract RewardDistributionIntegrationTest is TestConfig {
         usdc.mint(address(targetVault), amount);
     }
 
+    /// @notice Runs a full integration flow between the adapter and RewardDistributor contracts.
+    /// @dev Verifies deposits, fee harvesting, reward accrual, and multi-user distributions keep balances and treasury shares consistent.
     function test_RewardDistribution_HappyPath() public {
         uint256 vaultBalanceBefore = vault.totalAssets();
         uint256 vaultBalanceAfter;

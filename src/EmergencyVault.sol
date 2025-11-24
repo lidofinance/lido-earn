@@ -187,7 +187,6 @@ abstract contract EmergencyVault is Vault {
      *      Cannot be called after recovery is activated.
      *
      *      Only callable by EMERGENCY_ROLE.
-     *
      * @return recovered Amount of assets recovered in this call
      */
     function emergencyWithdraw() external virtual onlyRole(EMERGENCY_ROLE) nonReentrant returns (uint256 recovered) {
@@ -270,6 +269,7 @@ abstract contract EmergencyVault is Vault {
 
     /**
      * @notice Sweep any leftover assets once all shares are redeemed
+     * @dev Only callable by EMERGENCY_ROLE after all shares have been burned (totalSupply == 0)
      * @param recipient Address that receives the remaining assets
      */
     function sweepDust(address recipient) external onlyRole(EMERGENCY_ROLE) nonReentrant {
@@ -343,7 +343,6 @@ abstract contract EmergencyVault is Vault {
      *      Burns shares and transfers proportional assets from vault balance.
      *
      *      Formula: assets = shares * recoveryAssets / recoverySupply
-     *
      * @param shares Amount of shares to redeem
      * @param receiver Address that receives assets
      * @param owner Address whose shares are burned

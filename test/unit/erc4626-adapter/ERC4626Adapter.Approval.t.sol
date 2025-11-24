@@ -4,6 +4,8 @@ pragma solidity 0.8.30;
 import "./ERC4626AdapterTestBase.sol";
 
 contract ERC4626AdapterApprovalTest is ERC4626AdapterTestBase {
+    /// @notice Tests that refresh vault approval success.
+    /// @dev Validates that refresh vault approval success.
     function test_RefreshVaultApproval_Success() public {
         vm.prank(address(vault));
         usdc.approve(address(targetVault), 0);
@@ -14,12 +16,16 @@ contract ERC4626AdapterApprovalTest is ERC4626AdapterTestBase {
         assertEq(usdc.allowance(address(vault), address(targetVault)), type(uint256).max);
     }
 
+    /// @notice Tests that refresh vault approval revert when not admin.
+    /// @dev Validates that refresh vault approval revert when not admin.
     function test_RefreshVaultApproval_RevertWhen_NotAdmin() public {
         vm.expectRevert();
         vm.prank(alice);
         vault.refreshVaultApproval();
     }
 
+    /// @notice Tests that refresh vault approval sets max approval.
+    /// @dev Validates that refresh vault approval sets max approval.
     function test_RefreshVaultApproval_SetsMaxApproval() public {
         vm.prank(address(vault));
         usdc.approve(address(targetVault), 1_000e6);
@@ -29,6 +35,8 @@ contract ERC4626AdapterApprovalTest is ERC4626AdapterTestBase {
         assertEq(usdc.allowance(address(vault), address(targetVault)), type(uint256).max);
     }
 
+    /// @notice Tests that refresh vault approval emits approval event.
+    /// @dev Validates that refresh vault approval emits approval event.
     function test_RefreshVaultApproval_EmitsApprovalEvent() public {
         vm.prank(address(vault));
         usdc.approve(address(targetVault), 0);
@@ -39,12 +47,16 @@ contract ERC4626AdapterApprovalTest is ERC4626AdapterTestBase {
         vault.refreshVaultApproval();
     }
 
+    /// @notice Tests that refresh vault approval works when already max.
+    /// @dev Validates that refresh vault approval works when already max.
     function test_RefreshVaultApproval_WorksWhenAlreadyMax() public {
         assertEq(usdc.allowance(address(vault), address(targetVault)), type(uint256).max);
         vault.refreshVaultApproval();
         assertEq(usdc.allowance(address(vault), address(targetVault)), type(uint256).max);
     }
 
+    /// @notice Tests that refresh vault approval restores deposit functionality.
+    /// @dev Validates that refresh vault approval restores deposit functionality.
     function test_RefreshVaultApproval_RestoresDepositFunctionality() public {
         vm.prank(address(vault));
         usdc.approve(address(targetVault), 0);
@@ -62,6 +74,8 @@ contract ERC4626AdapterApprovalTest is ERC4626AdapterTestBase {
         assertEq(vault.balanceOf(alice), shares);
     }
 
+    /// @notice Tests that refresh vault approval only admin role.
+    /// @dev Validates that refresh vault approval only admin role.
     function test_RefreshVaultApproval_OnlyAdminRole() public {
         address randomUser = makeAddr("randomUser");
 

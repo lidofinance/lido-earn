@@ -25,7 +25,7 @@ contract RewardDistributorTest is TestConfig {
 
     function setUp() public {
         asset = new MockERC20("Mock USD", "mUSD", _assetDecimals());
-        vault = new MockVault(address(asset), treasury, REWARD_FEE, OFFSET, "Mock Vault", "mvMock");
+        vault = new MockVault(address(asset), treasury, REWARD_FEE, OFFSET, "Mock Vault", "mvMock", address(this));
     }
 
     function _defaultRecipients() internal view returns (address[] memory recs, uint256[] memory bps) {
@@ -45,6 +45,8 @@ contract RewardDistributorTest is TestConfig {
 
     /* ========== CONSTRUCTOR TESTS ========== */
 
+    /// @notice Ensures constructor reverts when length mismatch.
+    /// @dev Verifies the revert protects against length mismatch.
     function test_Constructor_RevertIf_LengthMismatch() public {
         address[] memory recs = new address[](1);
         recs[0] = recipientA;
@@ -56,6 +58,8 @@ contract RewardDistributorTest is TestConfig {
         new RewardDistributor(manager, recs, bps);
     }
 
+    /// @notice Ensures constructor reverts when zero recipients.
+    /// @dev Verifies the revert protects against zero recipients.
     function test_Constructor_RevertIf_ZeroRecipients() public {
         address[] memory recs = new address[](0);
         uint256[] memory bps = new uint256[](0);
@@ -64,6 +68,8 @@ contract RewardDistributorTest is TestConfig {
         new RewardDistributor(manager, recs, bps);
     }
 
+    /// @notice Ensures constructor reverts when zero address.
+    /// @dev Verifies the revert protects against zero address.
     function test_Constructor_RevertIf_ZeroAddress() public {
         address[] memory recs = new address[](1);
         recs[0] = address(0);
@@ -74,6 +80,8 @@ contract RewardDistributorTest is TestConfig {
         new RewardDistributor(manager, recs, bps);
     }
 
+    /// @notice Ensures constructor reverts when zero basis points.
+    /// @dev Verifies the revert protects against zero basis points.
     function test_Constructor_RevertIf_ZeroBasisPoints() public {
         address[] memory recs = new address[](1);
         recs[0] = recipientA;
@@ -84,6 +92,8 @@ contract RewardDistributorTest is TestConfig {
         new RewardDistributor(manager, recs, bps);
     }
 
+    /// @notice Ensures constructor reverts when invalid basis points sum.
+    /// @dev Verifies the revert protects against invalid basis points sum.
     function test_Constructor_RevertIf_InvalidBasisPointsSum() public {
         address[] memory recs = new address[](2);
         recs[0] = recipientA;
@@ -96,6 +106,8 @@ contract RewardDistributorTest is TestConfig {
         new RewardDistributor(manager, recs, bps);
     }
 
+    /// @notice Ensures constructor reverts when duplicate recipients.
+    /// @dev Verifies the revert protects against duplicate recipients.
     function test_Constructor_RevertIf_DuplicateRecipients() public {
         address dup = makeAddr("dup");
         address[] memory recs = new address[](2);
@@ -110,6 +122,8 @@ contract RewardDistributorTest is TestConfig {
         new RewardDistributor(manager, recs, bps);
     }
 
+    /// @notice Tests that constructor sets recipients and manager role.
+    /// @dev Validates that constructor sets recipients and manager role.
     function test_Constructor_SetsRecipientsAndManagerRole() public {
         RewardDistributor distributor = _deployDefaultDistributor();
 
@@ -130,6 +144,8 @@ contract RewardDistributorTest is TestConfig {
         assertEq(allRecipients[1].account, recipientB);
     }
 
+    /// @notice Fuzzes that constructor succeeds with valid two way split.
+    /// @dev Validates that constructor succeeds with valid two way split.
     function testFuzz_Constructor_SucceedsWithValidTwoWaySplit(uint16 shareA, address addrA, address addrB) public {
         addrA = addrA == address(0) ? makeAddr("addrA") : addrA;
         addrB = addrB == address(0) ? makeAddr("addrB") : addrB;
@@ -152,6 +168,8 @@ contract RewardDistributorTest is TestConfig {
 
     /* ========== DISTRIBUTE TESTS ========== */
 
+    /// @notice Ensures distribute reverts when no balance.
+    /// @dev Verifies the revert protects against no balance.
     function test_Distribute_RevertIf_NoBalance() public {
         RewardDistributor distributor = _deployDefaultDistributor();
 
@@ -160,6 +178,8 @@ contract RewardDistributorTest is TestConfig {
         distributor.distribute(address(asset));
     }
 
+    /// @notice Ensures distribute reverts when not manager.
+    /// @dev Verifies the revert protects against not manager.
     function test_Distribute_RevertIf_NotManager() public {
         RewardDistributor distributor = _deployDefaultDistributor();
         asset.mint(address(distributor), 1_000e6);
@@ -173,6 +193,8 @@ contract RewardDistributorTest is TestConfig {
         distributor.distribute(address(asset));
     }
 
+    /// @notice Tests that distribute distributes according to bps.
+    /// @dev Validates that distribute distributes according to bps.
     function test_Distribute_DistributesAccordingToBps() public {
         RewardDistributor distributor = _deployDefaultDistributor();
         uint256 amount = 10_000e6;
@@ -219,6 +241,8 @@ contract RewardDistributorTest is TestConfig {
         assertEq(asset.balanceOf(address(distributor)), amount - expectedAmounts[0] - expectedAmounts[1]);
     }
 
+    /// @notice Fuzzes that distribute two recipients.
+    /// @dev Validates that distribute two recipients.
     function testFuzz_Distribute_TwoRecipients(uint256 totalAmount, uint256 splitBps) public {
         totalAmount = bound(totalAmount, 1, 1_000_000_000e6);
         splitBps = bound(splitBps, 1, MAX_BPS - 1);
@@ -247,6 +271,8 @@ contract RewardDistributorTest is TestConfig {
 
     /* ========== REDEEM TESTS ========== */
 
+    /// @notice Ensures redeem reverts when no shares.
+    /// @dev Verifies the revert protects against no shares.
     function test_Redeem_RevertIf_NoShares() public {
         RewardDistributor distributor = _deployDefaultDistributor();
 
@@ -255,6 +281,8 @@ contract RewardDistributorTest is TestConfig {
         distributor.redeem(address(vault));
     }
 
+    /// @notice Ensures redeem reverts when not manager.
+    /// @dev Verifies the revert protects against not manager.
     function test_Redeem_RevertIf_NotManager() public {
         RewardDistributor distributor = _deployDefaultDistributor();
         _depositSharesForDistributor(distributor, 50_000e6);
@@ -268,6 +296,8 @@ contract RewardDistributorTest is TestConfig {
         distributor.redeem(address(vault));
     }
 
+    /// @notice Tests that redeem sends assets and emits event.
+    /// @dev Validates that redeem sends assets and emits event.
     function test_Redeem_SendsAssetsAndEmitsEvent() public {
         RewardDistributor distributor = _deployDefaultDistributor();
         uint256 depositAmount = 75_000e6;

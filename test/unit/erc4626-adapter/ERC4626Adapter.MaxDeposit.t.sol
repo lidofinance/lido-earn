@@ -5,6 +5,8 @@ import "./ERC4626AdapterTestBase.sol";
 import {Vault} from "src/Vault.sol";
 
 contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
+    /// @notice Tests that max deposit respects target vault limits.
+    /// @dev Validates that max deposit respects target vault limits.
     function test_MaxDeposit_RespectsTargetVaultLimits() public view {
         uint256 vaultMaxDeposit = vault.maxDeposit(alice);
         uint256 targetMaxDeposit = targetVault.maxDeposit(address(vault));
@@ -12,6 +14,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertEq(vaultMaxDeposit, targetMaxDeposit, "MaxDeposit should match target vault limits");
     }
 
+    /// @notice Tests that max deposit returns zero when paused.
+    /// @dev Validates that max deposit returns zero when paused.
     function test_MaxDeposit_ReturnsZeroWhenPaused() public {
         vm.prank(address(this));
         vault.pause();
@@ -21,6 +25,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertEq(vaultMaxDeposit, 0, "MaxDeposit should be 0 when paused");
     }
 
+    /// @notice Tests that max mint respects target vault limits.
+    /// @dev Validates that max mint respects target vault limits.
     function test_MaxMint_RespectsTargetVaultLimits() public {
         targetVault.setLiquidityCap(1_000_000e6);
 
@@ -31,6 +37,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertEq(maxMint, expectedMaxMint, "MaxMint should match converted target limits");
     }
 
+    /// @notice Tests that max mint returns zero when paused.
+    /// @dev Validates that max mint returns zero when paused.
     function test_MaxMint_ReturnsZeroWhenPaused() public {
         vm.prank(address(this));
         vault.pause();
@@ -40,6 +48,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertEq(maxMint, 0, "MaxMint should be 0 when paused");
     }
 
+    /// @notice Ensures deposit reverts when exceeds max deposit.
+    /// @dev Verifies the revert protects against exceeds max deposit.
     function test_Deposit_RevertIf_ExceedsMaxDeposit() public {
         targetVault.setLiquidityCap(100_000e6);
 
@@ -52,6 +62,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         vault.deposit(excessiveAmount, alice);
     }
 
+    /// @notice Ensures mint reverts when exceeds max deposit.
+    /// @dev Verifies the revert protects against exceeds max deposit.
     function test_Mint_RevertIf_ExceedsMaxDeposit() public {
         targetVault.setLiquidityCap(100_000e6);
 
@@ -64,6 +76,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         vault.mint(excessiveShares, alice);
     }
 
+    /// @notice Tests that mint checks max deposit after harvest.
+    /// @dev Validates that mint checks max deposit after harvest.
     function test_Mint_ChecksMaxDepositAfterHarvest() public {
         targetVault.setLiquidityCap(100_000e6);
 
@@ -101,6 +115,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertTrue(treasuryShares > 0, "Treasury should receive fee shares");
     }
 
+    /// @notice Tests that max deposit updates after deposit.
+    /// @dev Validates that max deposit updates after deposit.
     function test_MaxDeposit_UpdatesAfterDeposit() public {
         uint256 initialMaxDeposit = vault.maxDeposit(alice);
 
@@ -113,6 +129,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertLe(newMaxDeposit, initialMaxDeposit, "MaxDeposit should not increase after deposit");
     }
 
+    /// @notice Fuzzes that max deposit updates after deposit.
+    /// @dev Validates that max deposit updates after deposit.
     function testFuzz_MaxDeposit_UpdatesAfterDeposit(uint96 depositAmount) public {
         uint256 initialMaxDeposit = vault.maxDeposit(alice);
         uint256 minDeposit = vault.MIN_FIRST_DEPOSIT();
@@ -131,6 +149,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertLe(newMaxDeposit, initialMaxDeposit, "MaxDeposit should not increase after deposit");
     }
 
+    /// @notice Tests that max deposit multiple deposits approaching cap.
+    /// @dev Validates that max deposit multiple deposits approaching cap.
     function test_MaxDeposit_MultipleDepositsApproachingCap() public {
         uint256 maxDeposit = vault.maxDeposit(alice);
 
@@ -150,6 +170,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         }
     }
 
+    /// @notice Tests that deposit with cap updates max deposit.
+    /// @dev Validates that deposit with cap updates max deposit.
     function test_Deposit_WithCap_UpdatesMaxDeposit() public {
         targetVault.setLiquidityCap(100_000e6);
 
@@ -163,6 +185,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertEq(newMaxDeposit, initialMaxDeposit - 10_000e6, "MaxDeposit should decrease by deposit amount");
     }
 
+    /// @notice Fuzzes that deposit with cap updates max deposit.
+    /// @dev Validates that deposit with cap updates max deposit.
     function testFuzz_Deposit_WithCap_UpdatesMaxDeposit(uint96 capAmount, uint96 depositAmount) public {
         uint256 cap = bound(uint256(capAmount), vault.MIN_FIRST_DEPOSIT() * 2, type(uint96).max);
         uint256 deposit = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), cap / 2); // deposit должен быть меньше половины cap для теста
@@ -263,6 +287,8 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertLe(vault.totalAssets(), 100_000e6, "Should not exceed target vault cap");
     }
 
+    /// @notice Tests that mint with fee dilution stays within cap.
+    /// @dev Validates that mint with fee dilution stays within cap.
     function test_Mint_WithFeeDilution_StaysWithinCap() public {
         targetVault.setLiquidityCap(100_000e6);
 

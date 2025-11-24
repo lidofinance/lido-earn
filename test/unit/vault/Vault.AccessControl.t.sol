@@ -6,11 +6,15 @@ import {Vault} from "src/Vault.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract VaultAccessControlTest is VaultTestBase {
+    /// @notice Tests that admin role default admin.
+    /// @dev Validates that admin role default admin.
     function test_AdminRole_DefaultAdmin() public view {
         bytes32 adminRole = vault.DEFAULT_ADMIN_ROLE();
         assertTrue(vault.hasRole(adminRole, address(this)));
     }
 
+    /// @notice Tests that pauser role grant and revoke.
+    /// @dev Validates that pauser role grant and revoke.
     function test_PauserRole_GrantAndRevoke() public {
         address pauser = makeAddr("pauser");
         bytes32 pauserRole = vault.PAUSER_ROLE();
@@ -24,6 +28,8 @@ contract VaultAccessControlTest is VaultTestBase {
         assertFalse(vault.hasRole(pauserRole, pauser));
     }
 
+    /// @notice Tests that fee manager role grant and revoke.
+    /// @dev Validates that fee manager role grant and revoke.
     function test_FeeManagerRole_GrantAndRevoke() public {
         address feeManager = makeAddr("feeManager");
         bytes32 feeManagerRole = vault.MANAGER_ROLE();
@@ -37,6 +43,8 @@ contract VaultAccessControlTest is VaultTestBase {
         assertFalse(vault.hasRole(feeManagerRole, feeManager));
     }
 
+    /// @notice Tests that emergency role grant and revoke.
+    /// @dev Validates that emergency role grant and revoke.
     function test_EmergencyRole_GrantAndRevoke() public {
         address emergency = makeAddr("emergency");
         bytes32 emergencyRole = vault.EMERGENCY_ROLE();
@@ -50,6 +58,8 @@ contract VaultAccessControlTest is VaultTestBase {
         assertFalse(vault.hasRole(emergencyRole, emergency));
     }
 
+    /// @notice Ensures access control reverts when non admin grants role.
+    /// @dev Verifies the revert protects against non admin grants role.
     function test_AccessControl_RevertIf_NonAdminGrantsRole() public {
         address pauser = makeAddr("pauser");
         bytes32 pauserRole = vault.PAUSER_ROLE();
@@ -63,6 +73,8 @@ contract VaultAccessControlTest is VaultTestBase {
         vault.grantRole(pauserRole, pauser);
     }
 
+    /// @notice Ensures access control reverts when non admin revokes role.
+    /// @dev Verifies the revert protects against non admin revokes role.
     function test_AccessControl_RevertIf_NonAdminRevokesRole() public {
         address pauser = makeAddr("pauser");
         bytes32 pauserRole = vault.PAUSER_ROLE();
@@ -78,6 +90,8 @@ contract VaultAccessControlTest is VaultTestBase {
         vault.revokeRole(pauserRole, pauser);
     }
 
+    /// @notice Tests that access control multiple role holders.
+    /// @dev Validates that access control multiple role holders.
     function test_AccessControl_MultipleRoleHolders() public {
         address pauser1 = makeAddr("pauser1");
         address pauser2 = makeAddr("pauser2");
@@ -98,6 +112,8 @@ contract VaultAccessControlTest is VaultTestBase {
         assertFalse(vault.paused());
     }
 
+    /// @notice Tests that access control role admin of role.
+    /// @dev Validates that access control role admin of role.
     function test_AccessControl_RoleAdminOfRole() public view {
         bytes32 adminRole = vault.DEFAULT_ADMIN_ROLE();
         bytes32 pauserRole = vault.PAUSER_ROLE();
@@ -105,6 +121,8 @@ contract VaultAccessControlTest is VaultTestBase {
         assertEq(vault.getRoleAdmin(pauserRole), adminRole);
     }
 
+    /// @notice Tests that access control renounce role.
+    /// @dev Validates that access control renounce role.
     function test_AccessControl_RenounceRole() public {
         address pauser = makeAddr("pauser");
         bytes32 pauserRole = vault.PAUSER_ROLE();
@@ -118,6 +136,8 @@ contract VaultAccessControlTest is VaultTestBase {
         assertFalse(vault.hasRole(pauserRole, pauser));
     }
 
+    /// @notice Ensures access control renounce role reverts when caller differs.
+    /// @dev Verifies the revert protects against caller differs.
     function test_AccessControl_RenounceRole_RevertIf_CallerDiffers() public {
         address pauser = makeAddr("pauser");
         bytes32 pauserRole = vault.PAUSER_ROLE();
@@ -130,6 +150,8 @@ contract VaultAccessControlTest is VaultTestBase {
         vault.renounceRole(pauserRole, pauser);
     }
 
+    /// @notice Tests that access control deployer gets all roles.
+    /// @dev Validates that access control deployer gets all roles.
     function test_AccessControl_DeployerGetsAllRoles() public view {
         bytes32 adminRole = vault.DEFAULT_ADMIN_ROLE();
         bytes32 pauserRole = vault.PAUSER_ROLE();

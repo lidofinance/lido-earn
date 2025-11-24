@@ -20,8 +20,9 @@ contract MockVault is Vault {
         uint16 rewardFee_,
         uint8 offset_,
         string memory name_,
-        string memory symbol_
-    ) Vault(IERC20(asset_), treasury_, rewardFee_, offset_, name_, symbol_) {}
+        string memory symbol_,
+        address admin_
+    ) Vault(IERC20(asset_), treasury_, rewardFee_, offset_, name_, symbol_, admin_) {}
 
     function setForcedShortfall(uint256 amount) external {
         forcedShortfall = amount;

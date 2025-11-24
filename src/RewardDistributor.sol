@@ -104,24 +104,24 @@ contract RewardDistributor is AccessControl {
      * @notice Initializes the reward distributor with fixed recipients and allocations
      * @dev Recipients and their allocations are immutable after deployment.
      *      The manager receives both DEFAULT_ADMIN_ROLE and MANAGER_ROLE.
-     * @param _manager Address that will have permission to redeem and distribute rewards
-     * @param _recipients Array of recipient addresses
-     * @param _basisPoints Array of allocation percentages in basis points (must sum to 10,000)
+     * @param manager_ Address that will have permission to redeem and distribute rewards
+     * @param recipients_ Array of recipient addresses
+     * @param basisPoints_ Array of allocation percentages in basis points (must sum to 10,000)
      */
-    constructor(address _manager, address[] memory _recipients, uint256[] memory _basisPoints) {
-        if (_recipients.length != _basisPoints.length) {
+    constructor(address manager_, address[] memory recipients_, uint256[] memory basisPoints_) {
+        if (recipients_.length != basisPoints_.length) {
             revert InvalidRecipientsLength();
         }
 
-        if (_recipients.length == 0) {
+        if (recipients_.length == 0) {
             revert InvalidRecipientsLength();
         }
 
         uint256 totalBps = 0;
 
-        for (uint256 i = 0; i < _recipients.length; i++) {
-            address recipientAccount = _recipients[i];
-            uint256 recipientBps = _basisPoints[i];
+        for (uint256 i = 0; i < recipients_.length; i++) {
+            address recipientAccount = recipients_[i];
+            uint256 recipientBps = basisPoints_[i];
 
             if (recipientAccount == address(0)) {
                 revert ZeroAddress();
@@ -143,8 +143,8 @@ contract RewardDistributor is AccessControl {
             revert InvalidBasisPointsSum();
         }
 
-        _grantRole(DEFAULT_ADMIN_ROLE, _manager);
-        _grantRole(MANAGER_ROLE, _manager);
+        _grantRole(DEFAULT_ADMIN_ROLE, manager_);
+        _grantRole(MANAGER_ROLE, manager_);
     }
 
     /* ========== MANAGER FUNCTIONS ========== */

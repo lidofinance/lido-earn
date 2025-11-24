@@ -85,7 +85,8 @@ contract RewardDistributionInvariantTest is TestConfig {
             REWARD_FEE,
             OFFSET,
             "Morpho USDC Vault",
-            "mvUSDC"
+            "mvUSDC",
+            address(this)
         );
 
         address[] memory actors = new address[](3);
@@ -110,10 +111,14 @@ contract RewardDistributionInvariantTest is TestConfig {
         vm.stopPrank();
     }
 
+    /// @notice Ensures treasury share mints only occur alongside positive profit realization.
+    /// @dev Verifies handler never records treasury mints during operations that did not accrue profit.
     function invariant_TreasurySharesMintedOnlyWithProfit() public view {
         assertEq(handler.treasuryMintsWithoutProfit(), 0, "INVARIANT VIOLATION: Treasury shares minted without profit");
     }
 
+    /// @notice Confirms that whenever profit exists the treasury actually receives new shares.
+    /// @dev Verifies positive profit runs tally at least one user operation that triggered fee minting.
     function invariant_TreasuryReceivesSharesWhenProfit() public view {
         if (handler.treasuryMintsCount() > 0) {
             uint256 totalOperations =
@@ -122,6 +127,8 @@ contract RewardDistributionInvariantTest is TestConfig {
         }
     }
 
+    /// @notice Guarantees the recorded `lastTotalAssets` snapshot never exceeds current assets.
+    /// @dev Protects fee accounting by ensuring harvest snapshots cannot drift above actual assets.
     function invariant_LastTotalAssetsNeverExceedsCurrent() public view {
         uint256 currentAssets = vault.totalAssets();
         uint256 lastAssets = vault.lastTotalAssets();
@@ -129,6 +136,8 @@ contract RewardDistributionInvariantTest is TestConfig {
         assertLe(lastAssets, currentAssets, "INVARIANT VIOLATION: lastTotalAssets > totalAssets");
     }
 
+    /// @notice Ensures the configured reward fee always remains within protocol bounds.
+    /// @dev Validates reward fee never exceeds `MAX_REWARD_FEE_BASIS_POINTS`.
     function invariant_RewardFeeWithinLimits() public view {
         assertLe(
             vault.rewardFee(),
@@ -137,6 +146,8 @@ contract RewardDistributionInvariantTest is TestConfig {
         );
     }
 
+    /// @notice Provides a readable summary after each invariant run for debugging context.
+    /// @dev Emits call counters and cumulative stats through console logs.
     function invariant_callSummary() public view {
         console.log("\n=== Invariant Test Summary ===");
         console.log("Deposits:", handler.depositsCount());

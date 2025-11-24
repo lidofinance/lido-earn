@@ -6,6 +6,8 @@ import {Vault} from "src/Vault.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract VaultConfigTest is VaultTestBase {
+    /// @notice Exercises standard set reward fee happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_SetRewardFee_Basic() public {
         uint16 newFee = 1000;
 
@@ -17,6 +19,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.rewardFee(), newFee);
     }
 
+    /// @notice Tests that set reward fee to zero.
+    /// @dev Validates that set reward fee to zero.
     function test_SetRewardFee_ToZero() public {
         vm.expectEmit(true, true, false, true);
         emit Vault.RewardFeeUpdated(REWARD_FEE, 0);
@@ -26,6 +30,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.rewardFee(), 0);
     }
 
+    /// @notice Tests that set reward fee to maximum.
+    /// @dev Validates that set reward fee to maximum.
     function test_SetRewardFee_ToMaximum() public {
         uint16 maxFee = uint16(vault.MAX_REWARD_FEE_BASIS_POINTS());
 
@@ -37,6 +43,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.rewardFee(), maxFee);
     }
 
+    /// @notice Ensures set reward fee reverts when exceeds maximum.
+    /// @dev Verifies the revert protects against exceeds maximum.
     function test_SetRewardFee_RevertIf_ExceedsMaximum() public {
         uint16 invalidFee = uint16(vault.MAX_REWARD_FEE_BASIS_POINTS() + 1);
 
@@ -44,6 +52,8 @@ contract VaultConfigTest is VaultTestBase {
         vault.setRewardFee(invalidFee);
     }
 
+    /// @notice Ensures set reward fee reverts when not fee manager.
+    /// @dev Verifies the revert protects against not fee manager.
     function test_SetRewardFee_RevertIf_NotFeeManager() public {
         uint16 newFee = 1500;
 
@@ -56,6 +66,8 @@ contract VaultConfigTest is VaultTestBase {
         vault.setRewardFee(newFee);
     }
 
+    /// @notice Tests that set reward fee harvests fees before change.
+    /// @dev Validates that set reward fee harvests fees before change.
     function test_SetRewardFee_HarvestsFeesBeforeChange() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -71,6 +83,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.balanceOf(treasury), expectedShares);
     }
 
+    /// @notice Tests that set reward fee updates last total assets.
+    /// @dev Validates that set reward fee updates last total assets.
     function test_SetRewardFee_UpdatesLastTotalAssets() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);
@@ -87,6 +101,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(lastAssetsAfter, 110_000e6);
     }
 
+    /// @notice Tests that set reward fee with fee manager role.
+    /// @dev Validates that set reward fee with fee manager role.
     function test_SetRewardFee_WithFeeManagerRole() public {
         address feeManager = makeAddr("feeManager");
         vault.grantRole(vault.MANAGER_ROLE(), feeManager);
@@ -102,6 +118,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.rewardFee(), newFee);
     }
 
+    /// @notice Tests that set reward fee multiple changes.
+    /// @dev Validates that set reward fee multiple changes.
     function test_SetRewardFee_MultipleChanges() public {
         vault.setRewardFee(1000);
         assertEq(vault.rewardFee(), 1000);
@@ -117,6 +135,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.rewardFee(), REWARD_FEE);
     }
 
+    /// @notice Fuzzes that set reward fee within bounds.
+    /// @dev Validates that set reward fee within bounds.
     function testFuzz_SetRewardFee_WithinBounds(uint16 newFee) public {
         newFee = uint16(bound(uint256(newFee), 0, vault.MAX_REWARD_FEE_BASIS_POINTS()));
 
@@ -125,6 +145,8 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.rewardFee(), newFee);
     }
 
+    /// @notice Exercises standard set treasury happy path.
+    /// @dev Verifies balances and state remain correct in the success scenario.
     function test_SetTreasury_Basic() public {
         address newTreasury = makeAddr("newTreasury");
 
@@ -136,16 +158,22 @@ contract VaultConfigTest is VaultTestBase {
         assertEq(vault.TREASURY(), newTreasury);
     }
 
+    /// @notice Ensures set treasury reverts when zero address.
+    /// @dev Verifies the revert protects against zero address.
     function test_SetTreasury_RevertIf_ZeroAddress() public {
         vm.expectRevert(Vault.ZeroAddress.selector);
         vault.setTreasury(address(0));
     }
 
+    /// @notice Ensures set treasury reverts when same address.
+    /// @dev Verifies the revert protects against same address.
     function test_SetTreasury_RevertIf_SameAddress() public {
         vm.expectRevert(Vault.InvalidTreasuryAddress.selector);
         vault.setTreasury(treasury);
     }
 
+    /// @notice Ensures set treasury reverts when not fee manager.
+    /// @dev Verifies the revert protects against not fee manager.
     function test_SetTreasury_RevertIf_NotFeeManager() public {
         address newTreasury = makeAddr("newTreasury");
         vm.expectRevert(
@@ -157,6 +185,8 @@ contract VaultConfigTest is VaultTestBase {
         vault.setTreasury(newTreasury);
     }
 
+    /// @notice Tests that set treasury does not transfer existing shares.
+    /// @dev Validates that set treasury does not transfer existing shares.
     function test_SetTreasury_DoesNotTransferExistingShares() public {
         vm.prank(alice);
         vault.deposit(100_000e6, alice);

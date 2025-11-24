@@ -72,7 +72,8 @@ contract DemoDeploy is Script {
             REWARD_FEE,
             DECIMALS_OFFSET,
             "Demo ERC4626 Vault",
-            "d4626"
+            "d4626",
+            ADMIN
         );
         console.log("   Adapter deployed at:", address(vault));
         console.log("");

@@ -28,7 +28,7 @@ contract VaultTestBase is TestConfig {
         assetDecimals = _assetDecimals();
         asset = new MockERC20("USD Coin", "USDC", assetDecimals);
 
-        vault = new MockVault(address(asset), treasury, REWARD_FEE, OFFSET, "Mock Vault", "mvUSDC");
+        vault = new MockVault(address(asset), treasury, REWARD_FEE, OFFSET, "Mock Vault", "mvUSDC", address(this));
 
         asset.mint(alice, INITIAL_BALANCE);
         asset.mint(bob, INITIAL_BALANCE);
