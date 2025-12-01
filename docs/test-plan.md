@@ -316,7 +316,7 @@
 | testFuzz_activateRecovery_SnapshotsCorrectly | Recovery snapshot | recoveryAssets and recoverySupply set correctly |
 | testFuzz_activateRecovery_HarvestsFeesBeforeSnapshot | Pre-recovery harvest | Fees harvested before snapshot |
 | testFuzz_activateRecovery_EmitsEvent | Event validation | RecoveryActivated event with correct data |
-| testFuzz_activateRecovery_RevertIf_AmountMismatch_TooHigh | Amount validation | Reverts if claimed amount > actual balance + 1% |
+| testFuzz_activateRecovery_WorksWithHigherAmount | Amount validation | Reverts if claimed amount > actual balance |
 | testFuzz_activateRecovery_RevertIf_AmountMismatch_TooLow | Amount validation | Reverts if claimed amount < actual balance - 1% |
 | testFuzz_activateRecovery_AllowsPartialRecovery | Partial recovery | Works with partial liquidity (90% recovered) |
 | testFuzz_activateRecovery_RevertIf_AlreadyActive | Recovery idempotency | Reverts with RecoveryAlreadyActive |

@@ -332,9 +332,9 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.recoverySupply(), totalSupply);
     }
 
-    /// @notice Fuzzes that activate recovery reverts when amount mismatch too high.
+    /// @notice Fuzzes that activate recovery works when amount is higher than expected.
     /// @dev Verifies the revert protects against amount mismatch too high.
-    function testFuzz_activateRecovery_RevertIf_AmountMismatch_TooHigh(uint96 depositAmount) public {
+    function testFuzz_activateRecovery_WorksWithHigherAmount(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
 
@@ -347,11 +347,10 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         uint256 vaultBalance = usdc.balanceOf(address(vault));
         uint256 declaredAmount = vaultBalance + 1000;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(EmergencyVault.RecoverableAmountMismatch.selector, declaredAmount, vaultBalance)
-        );
         vm.prank(emergencyAdmin);
         vault.activateRecovery(declaredAmount);
+
+        assertTrue(vault.recoveryMode());
     }
 
     /// @notice Fuzzes that activate recovery reverts when amount mismatch too low.

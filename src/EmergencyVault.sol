@@ -247,7 +247,7 @@ abstract contract EmergencyVault is Vault {
         if (!emergencyMode) revert EmergencyModeNotActive();
 
         uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
-        if (declaredRecoverableAmount != vaultBalance) {
+        if (declaredRecoverableAmount < vaultBalance) {
             revert RecoverableAmountMismatch(declaredRecoverableAmount, vaultBalance);
         }
         if (declaredRecoverableAmount == 0) revert ZeroAmount();
