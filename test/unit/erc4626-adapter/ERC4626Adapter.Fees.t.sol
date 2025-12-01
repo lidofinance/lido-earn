@@ -203,7 +203,7 @@ contract ERC4626AdapterFeesTest is ERC4626AdapterTestBase {
         bool found;
 
         for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("FeesHarvested(uint256,uint256,uint256)")) {
+            if (logs[i].topics[0] == keccak256("FeesHarvested(uint256)")) {
                 found = true;
                 break;
             }

@@ -33,7 +33,14 @@ contract MorphoVaultIntegrationTest is Test {
 
     function _deployVault(VaultTestConfig memory config) internal {
         vault = new ERC4626Adapter(
-            config.token, config.targetVault, treasury, config.rewardFee, config.offset, config.name, config.symbol, address(this)
+            config.token,
+            config.targetVault,
+            treasury,
+            config.rewardFee,
+            config.offset,
+            config.name,
+            config.symbol,
+            address(this)
         );
 
         vault.grantRole(vault.EMERGENCY_ROLE(), emergencyAdmin);

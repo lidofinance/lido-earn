@@ -22,10 +22,9 @@ contract VaultFeesTest is VaultTestBase {
         asset.mint(address(vault), profit);
 
         uint256 expectedShares = _calculateExpectedFeeShares(profit);
-        uint256 expectedFeeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
 
         vm.expectEmit(false, false, false, true);
-        emit Vault.FeesHarvested(profit, expectedFeeAmount, expectedShares);
+        emit Vault.FeesHarvested(expectedShares);
 
         vault.harvestFees();
 
@@ -50,7 +49,7 @@ contract VaultFeesTest is VaultTestBase {
         bool foundFeesHarvestedEvent = false;
 
         for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("FeesHarvested(uint256,uint256,uint256)")) {
+            if (logs[i].topics[0] == keccak256("FeesHarvested(uint256)")) {
                 foundFeesHarvestedEvent = true;
                 break;
             }

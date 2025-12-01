@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {TestConfig} from "test/utils/TestConfig.sol";
 import {MockVault} from "test/mocks/MockVault.sol";
 import {MockERC20} from "test/mocks/MockERC20.sol";
 
 contract VaultTestBase is TestConfig {
+    using Math for uint256;
+
     MockVault public vault;
     MockERC20 public asset;
     uint8 internal assetDecimals;
@@ -50,7 +53,7 @@ contract VaultTestBase is TestConfig {
         uint256 currentTotal = vault.totalAssets();
         uint256 supply = vault.totalSupply();
         uint256 feeAmount = (profit * REWARD_FEE) / vault.MAX_BASIS_POINTS();
-        return (feeAmount * supply) / (currentTotal - feeAmount);
+        return feeAmount.mulDiv(supply, currentTotal - feeAmount, Math.Rounding.Ceil);
     }
 
     function _permitHelper(

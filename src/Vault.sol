@@ -90,10 +90,8 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     );
 
     /// @notice Emitted when performance fees are harvested
-    /// @param profit Total profit since last harvest
-    /// @param feeAmount Amount of profit taken as fees
     /// @param sharesMinted Amount of shares minted to treasury as fees
-    event FeesHarvested(uint256 profit, uint256 feeAmount, uint256 sharesMinted);
+    event FeesHarvested(uint256 sharesMinted);
 
     /// @notice Emitted when reward fee percentage is updated
     /// @param oldFee Previous fee in basis points
@@ -326,7 +324,6 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         }
 
         _burn(shareOwner, sharesBurned);
-
         lastTotalAssets = totalAssets();
 
         emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsWithdrawn, sharesBurned);
@@ -423,15 +420,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         }
 
         if (currentTotal > lastTotalAssets) {
-            uint256 profit = currentTotal - lastTotalAssets;
             uint256 sharesMinted = _calculateFeeShares(currentTotal, supply);
-
             if (sharesMinted > 0) {
-                uint256 feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
-                if (feeAmount > profit) feeAmount = profit;
-
                 _mint(TREASURY, sharesMinted);
-                emit FeesHarvested(profit, feeAmount, sharesMinted);
+                emit FeesHarvested(sharesMinted);
             }
         }
 
@@ -455,7 +447,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         if (feeAmount > profit) feeAmount = profit;
         if (feeAmount > 0 && feeAmount < currentTotal) {
-            return feeAmount.mulDiv(supply, currentTotal - feeAmount, Math.Rounding.Floor);
+            return feeAmount.mulDiv(supply, currentTotal - feeAmount, Math.Rounding.Ceil);
         }
 
         return 0;

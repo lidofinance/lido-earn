@@ -149,7 +149,7 @@ contract RewardDistributionIntegrationTest is TestConfig {
             uint256 profit = vaultBalanceBefore - lastAssets;
             uint256 expectedFeeAmount = profit.mulDiv(REWARD_FEE_BASIS_POINTS, MAX_BASIS_POINTS, Math.Rounding.Ceil);
             uint256 expectedTreasuryShares =
-                (expectedFeeAmount * totalSupplyBefore) / (vaultBalanceBefore - expectedFeeAmount);
+                expectedFeeAmount.mulDiv(totalSupplyBefore, vaultBalanceBefore - expectedFeeAmount, Math.Rounding.Ceil);
 
             uint256 deposit = 5_000e6;
 
@@ -208,7 +208,7 @@ contract RewardDistributionIntegrationTest is TestConfig {
             uint256 profit = vaultBalanceBefore - lastAssets;
             uint256 expectedFeeAmount = profit.mulDiv(REWARD_FEE_BASIS_POINTS, MAX_BASIS_POINTS, Math.Rounding.Ceil);
             uint256 expectedTreasuryShares =
-                (expectedFeeAmount * totalSupplyBefore) / (vaultBalanceBefore - expectedFeeAmount);
+                expectedFeeAmount.mulDiv(totalSupplyBefore, vaultBalanceBefore - expectedFeeAmount, Math.Rounding.Ceil);
 
             uint256 deposit = 7_500e6;
 
@@ -276,8 +276,9 @@ contract RewardDistributionIntegrationTest is TestConfig {
             uint256 expectedAdditionalTreasuryShares = 0;
             if (profit > 0) {
                 uint256 expectedFeeAmount = profit.mulDiv(REWARD_FEE_BASIS_POINTS, MAX_BASIS_POINTS, Math.Rounding.Ceil);
-                expectedAdditionalTreasuryShares =
-                    (expectedFeeAmount * totalSupplyBefore) / (totalAssetsBefore - expectedFeeAmount);
+                expectedAdditionalTreasuryShares = expectedFeeAmount.mulDiv(
+                    totalSupplyBefore, totalAssetsBefore - expectedFeeAmount, Math.Rounding.Ceil
+                );
             }
 
             uint256 aliceUsdcBefore = usdc.balanceOf(address(alice));

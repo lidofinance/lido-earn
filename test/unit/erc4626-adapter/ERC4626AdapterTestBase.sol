@@ -35,7 +35,14 @@ contract ERC4626AdapterTestBase is TestConfig {
         targetVault = new MockERC4626Vault(IERC20(address(usdc)), "Mock Yield Vault", "yUSDC", OFFSET);
 
         vault = new ERC4626Adapter(
-            address(usdc), address(targetVault), treasury, REWARD_FEE, OFFSET, "Lido ERC4626 Vault", "lido4626", address(this)
+            address(usdc),
+            address(targetVault),
+            treasury,
+            REWARD_FEE,
+            OFFSET,
+            "Lido ERC4626 Vault",
+            "lido4626",
+            address(this)
         );
 
         usdc.mint(alice, INITIAL_BALANCE);

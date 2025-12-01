@@ -35,7 +35,8 @@ contract VaultEdgeCasesTest is TestConfig {
 
     function setUp() public {
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
-        vault = new MockVault(address(asset), treasury, DEFAULT_FEE, DEFAULT_OFFSET, "Test Vault", "tvUSDC", address(this));
+        vault =
+            new MockVault(address(asset), treasury, DEFAULT_FEE, DEFAULT_OFFSET, "Test Vault", "tvUSDC", address(this));
     }
 
     /* ========== DEPOSIT EDGE CASES ========== */
