@@ -401,7 +401,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @dev Calculates profit since last harvest and mints fee shares to treasury.
      *      Also called automatically on deposits and withdrawals.
      */
-    function harvestFees() external {
+    function harvestFees() external nonReentrant {
         _harvestFees();
     }
 
