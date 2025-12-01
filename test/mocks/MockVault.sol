@@ -86,4 +86,8 @@ contract MockVault is Vault {
         // MockVault doesn't have actual protocol integration, always return 0
         return 0;
     }
+
+    function _refreshProtocolApproval() internal override {
+        // MockVault doesn't have actual protocol integration, no-op
+    }
 }

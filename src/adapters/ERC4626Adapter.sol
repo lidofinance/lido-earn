@@ -175,14 +175,17 @@ contract ERC4626Adapter is EmergencyVault {
 
     /**
      * @notice Emergency withdrawal of all target vault positions
-     * @dev Redeems all available target vault shares and transfers assets to receiver
+     * @dev Redeems all available target vault shares and transfers assets to receiver.
+     *      Revokes approval to target vault on first call to prevent compromised vault attacks.
      * @param receiver Address that will receive the withdrawn assets
      * @return assets Amount of assets withdrawn from target vault
      */
     function _emergencyWithdrawFromProtocol(address receiver) internal override returns (uint256 assets) {
         uint256 targetShares = TARGET_VAULT.maxRedeem(address(this));
         if (targetShares == 0) return 0;
+
         assets = TARGET_VAULT.redeem(targetShares, receiver, address(this));
+        _revokeProtocolApproval();
     }
 
     /**
@@ -196,14 +199,26 @@ contract ERC4626Adapter is EmergencyVault {
         return TARGET_VAULT.convertToAssets(targetShares);
     }
 
-    /* ========== ADMIN FUNCTIONS ========== */
+    /* ========== INTERNAL OVERRIDES ========== */
+
+    /**
+     * @notice Revokes approval to target vault (called during emergency withdrawal)
+     * @dev Sets approval to 0. Safe to call multiple times (idempotent).
+     *      After revocation, vault can no longer deposit to target vault.
+     */
+    function _revokeProtocolApproval() internal override {
+        uint256 currentApproval = ASSET.allowance(address(this), address(TARGET_VAULT));
+        if (currentApproval > 0) {
+            ASSET.forceApprove(address(TARGET_VAULT), 0);
+        }
+    }
 
     /**
      * @notice Refreshes the infinite approval to the target ERC4626 vault
-     * @dev Resets approval to type(uint256).max. Only callable by DEFAULT_ADMIN_ROLE.
-     *      Useful if approval was somehow consumed or needs to be reset.
+     * @dev Resets approval to type(uint256).max.
+     *      Useful if approval was revoked and needs to be restored.
      */
-    function refreshVaultApproval() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function _refreshProtocolApproval() internal override {
         ASSET.forceApprove(address(TARGET_VAULT), type(uint256).max);
     }
 }

@@ -691,4 +691,38 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
         if (feeAmount > profit) feeAmount = profit;
     }
+
+    /* ========== PROTOCOL APPROVAL MANAGEMENT ========== */
+
+    /**
+     * @notice Hook to revoke protocol approvals during emergency withdrawal
+     * @dev Called by inheriting contracts during first emergency withdrawal.
+     *      Default implementation is no-op. Override to revoke specific protocol approvals.
+     */
+    function _revokeProtocolApproval() internal virtual {}
+
+    /**
+     * @notice Hook to refresh protocol approvals (e.g., after revocation or for maintenance)
+     * @dev Override in inheriting contract with protocol-specific logic.
+     *      Default implementation is no-op.
+     */
+    function _refreshProtocolApproval() internal virtual {}
+
+    /**
+     * @notice Revokes protocol approvals
+     * @dev Calls internal _revokeProtocolApproval() hook.
+     *      Only callable by EMERGENCY_ROLE.
+     */
+    function revokeProtocolApproval() public onlyRole(EMERGENCY_ROLE) {
+        _revokeProtocolApproval();
+    }
+
+    /**
+     * @notice Refreshes protocol approvals (e.g., after revocation or for maintenance)
+     * @dev Calls internal _refreshProtocolApproval() hook.
+     *      Only callable by EMERGENCY_ROLE.
+     */
+    function refreshProtocolApproval() public onlyRole(EMERGENCY_ROLE) {
+        _refreshProtocolApproval();
+    }
 }

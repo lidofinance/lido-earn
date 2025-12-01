@@ -460,17 +460,22 @@
 
 ---
 
-### ERC4626Adapter.Approval.t.sol (7 tests)
+### ERC4626Adapter.Approval.t.sol (13 tests)
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
-| test_RefreshVaultApproval_Success | Approval refresh | Approval reset to type(uint256).max |
-| test_RefreshVaultApproval_RevertWhen_NotAdmin | Admin authorization | Reverts without DEFAULT_ADMIN_ROLE |
-| test_RefreshVaultApproval_SetsMaxApproval | Max approval | Allowance = type(uint256).max |
-| test_RefreshVaultApproval_EmitsApprovalEvent | Event emission | Approval event with correct params |
-| test_RefreshVaultApproval_WorksWhenAlreadyMax | Refresh when max | Succeeds without revert |
-| test_RefreshVaultApproval_RestoresDepositFunctionality | Functionality restoration | Refresh enables deposits after approval consumed |
-| test_RefreshVaultApproval_OnlyAdminRole | Role requirement | DEFAULT_ADMIN_ROLE required |
+| test_RefreshProtocolApproval_Success | Approval refresh | Approval reset to type(uint256).max |
+| test_RefreshProtocolApproval_RevertWhen_NotAdmin | Emergency role authorization | Reverts without EMERGENCY_ROLE |
+| test_RefreshProtocolApproval_SetsMaxApproval | Max approval | Allowance = type(uint256).max |
+| test_RefreshProtocolApproval_EmitsApprovalEvent | Event emission | Approval event with correct params |
+| test_RefreshProtocolApproval_WorksWhenAlreadyMax | Refresh when max | Succeeds without revert |
+| test_RefreshProtocolApproval_RestoresDepositFunctionality | Functionality restoration | Refresh enables deposits after approval consumed |
+| test_RefreshProtocolApproval_OnlyEmergencyRole | Role requirement | EMERGENCY_ROLE required |
+| test_EmergencyWithdraw_RevokesApproval | Approval revocation on emergency | emergencyWithdraw() sets approval to 0 |
+| test_EmergencyWithdraw_MultipleCallsWorkWithRevokedApproval | Multiple emergency withdrawals | Subsequent emergencyWithdraw calls work despite revoked approval (redeem doesn't need approval) |
+| test_EmergencyWithdraw_DepositFailsAfterRevocation | Deposit blocked after emergency | Approval = 0 after emergency withdrawal |
+| test_RefreshProtocolApproval_RestoresAfterEmergencyRevocation | Approval restoration | refreshProtocolApproval() restores approval after emergency revocation |
+| test_EmergencyWithdraw_ApprovalRevocationIdempotent | Idempotent revocation | Multiple emergencyWithdraw calls safely handle already-revoked approval |
 
 ---
 
