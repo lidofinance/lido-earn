@@ -184,8 +184,8 @@ contract ERC4626Adapter is EmergencyVault {
         uint256 targetShares = TARGET_VAULT.maxRedeem(address(this));
         if (targetShares == 0) return 0;
 
-        assets = TARGET_VAULT.redeem(targetShares, receiver, address(this));
         _revokeProtocolApproval();
+        assets = TARGET_VAULT.redeem(targetShares, receiver, address(this));
     }
 
     /**
