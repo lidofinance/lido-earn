@@ -16,7 +16,7 @@ contract RewardDistributorTest is TestConfig {
     MockERC20 internal asset;
     MockVault internal vault;
 
-    address internal manager = makeAddr("manager");
+    address internal admin = makeAddr("admin");
     address internal nonManager = makeAddr("nonManager");
     address internal recipientA = makeAddr("recipientA");
     address internal recipientB = makeAddr("recipientB");
@@ -43,7 +43,7 @@ contract RewardDistributorTest is TestConfig {
 
     function _deployDefaultDistributor() internal returns (RewardDistributor distributor) {
         (address[] memory recs, uint256[] memory bps) = _defaultRecipients();
-        distributor = new RewardDistributor(manager, recs, bps);
+        distributor = new RewardDistributor(admin, recs, bps);
     }
 
     /* ========== CONSTRUCTOR TESTS ========== */
@@ -58,7 +58,7 @@ contract RewardDistributorTest is TestConfig {
         bps[1] = 5_000;
 
         vm.expectRevert(RewardDistributor.InvalidRecipientsLength.selector);
-        new RewardDistributor(manager, recs, bps);
+        new RewardDistributor(admin, recs, bps);
     }
 
     /// @notice Ensures constructor reverts when zero recipients.
@@ -68,7 +68,7 @@ contract RewardDistributorTest is TestConfig {
         uint256[] memory bps = new uint256[](0);
 
         vm.expectRevert(RewardDistributor.InvalidRecipientsLength.selector);
-        new RewardDistributor(manager, recs, bps);
+        new RewardDistributor(admin, recs, bps);
     }
 
     /// @notice Ensures constructor reverts when zero address.
@@ -80,7 +80,7 @@ contract RewardDistributorTest is TestConfig {
         bps[0] = MAX_BPS;
 
         vm.expectRevert(RewardDistributor.ZeroAddress.selector);
-        new RewardDistributor(manager, recs, bps);
+        new RewardDistributor(admin, recs, bps);
     }
 
     /// @notice Ensures constructor reverts when zero basis points.
@@ -92,7 +92,7 @@ contract RewardDistributorTest is TestConfig {
         bps[0] = 0;
 
         vm.expectRevert(RewardDistributor.ZeroBasisPoints.selector);
-        new RewardDistributor(manager, recs, bps);
+        new RewardDistributor(admin, recs, bps);
     }
 
     /// @notice Ensures constructor reverts when invalid basis points sum.
@@ -106,7 +106,7 @@ contract RewardDistributorTest is TestConfig {
         bps[1] = 5_000; // sums to 8_000
 
         vm.expectRevert(RewardDistributor.InvalidBasisPointsSum.selector);
-        new RewardDistributor(manager, recs, bps);
+        new RewardDistributor(admin, recs, bps);
     }
 
     /// @notice Ensures constructor reverts when duplicate recipients.
@@ -122,7 +122,7 @@ contract RewardDistributorTest is TestConfig {
         bps[1] = 5_000;
 
         vm.expectRevert(abi.encodeWithSelector(RewardDistributor.DuplicateRecipient.selector, dup));
-        new RewardDistributor(manager, recs, bps);
+        new RewardDistributor(admin, recs, bps);
     }
 
     /// @notice Tests that constructor sets recipients and manager role.
@@ -130,7 +130,7 @@ contract RewardDistributorTest is TestConfig {
     function test_Constructor_SetsRecipientsAndManagerRole() public {
         RewardDistributor distributor = _deployDefaultDistributor();
 
-        assertTrue(distributor.hasRole(distributor.MANAGER_ROLE(), manager));
+        assertTrue(distributor.hasRole(distributor.MANAGER_ROLE(), admin));
         assertEq(distributor.getRecipientsCount(), 2);
 
         (address account0, uint256 bps0) = distributor.getRecipient(0);
@@ -165,8 +165,92 @@ contract RewardDistributorTest is TestConfig {
         bps[0] = bpsA;
         bps[1] = bpsB;
 
-        RewardDistributor distributor = new RewardDistributor(manager, recs, bps);
+        RewardDistributor distributor = new RewardDistributor(admin, recs, bps);
         assertEq(distributor.getRecipientsCount(), 2);
+    }
+
+    /* ========== RECIPIENT REPLACEMENT TESTS ========== */
+
+    /// @notice Tests that admin can replace recipient address and emit event.
+    function test_ReplaceRecipient_Succeeds() public {
+        RewardDistributor distributor = _deployDefaultDistributor();
+        address newRecipient = makeAddr("newRecipient");
+
+        (address oldRecipient,) = distributor.getRecipient(0);
+
+        vm.expectEmit(true, true, true, true);
+        emit RewardDistributor.RecipientReplaced(0, oldRecipient, newRecipient);
+
+        vm.prank(admin);
+        distributor.replaceRecipient(0, newRecipient);
+
+        (address updatedRecipient,) = distributor.getRecipient(0);
+        assertEq(updatedRecipient, newRecipient);
+    }
+
+    /// @notice Ensures replace recipient reverts when caller lacks recipients manager role.
+    function test_ReplaceRecipient_RevertIf_NotRecipientsManager() public {
+        RewardDistributor distributor = _deployDefaultDistributor();
+        address newRecipient = makeAddr("newRecipient");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                nonManager,
+                distributor.RECIPIENTS_MANAGER_ROLE()
+            )
+        );
+        vm.prank(nonManager);
+        distributor.replaceRecipient(0, newRecipient);
+    }
+
+    /// @notice Ensures replace recipient reverts when index is invalid.
+    function test_ReplaceRecipient_RevertIf_InvalidIndex() public {
+        RewardDistributor distributor = _deployDefaultDistributor();
+
+        vm.expectRevert(abi.encodeWithSelector(RewardDistributor.InvalidRecipientIndex.selector, 2));
+        vm.prank(admin);
+        distributor.replaceRecipient(2, makeAddr("newRecipient"));
+    }
+
+    /// @notice Ensures replace recipient reverts when using existing recipient address.
+    function test_ReplaceRecipient_RevertIf_DuplicateAddress() public {
+        RewardDistributor distributor = _deployDefaultDistributor();
+
+        vm.expectRevert(abi.encodeWithSelector(RewardDistributor.DuplicateRecipient.selector, recipientB));
+        vm.prank(admin);
+        distributor.replaceRecipient(0, recipientB);
+    }
+
+    /// @notice Ensures replace recipient reverts when address unchanged.
+    function test_ReplaceRecipient_RevertIf_Unchanged() public {
+        RewardDistributor distributor = _deployDefaultDistributor();
+        (address currentRecipient,) = distributor.getRecipient(0);
+
+        vm.expectRevert(RewardDistributor.RecipientUnchanged.selector);
+        vm.prank(admin);
+        distributor.replaceRecipient(0, currentRecipient);
+    }
+
+    /// @notice Ensures default admin without recipients role cannot replace recipient.
+    function test_ReplaceRecipient_RevertIf_AdminOnly() public {
+        RewardDistributor distributor = _deployDefaultDistributor();
+        address adminOnly = makeAddr("adminOnly");
+
+        bytes32 role = distributor.DEFAULT_ADMIN_ROLE();
+
+        vm.prank(admin);
+        distributor.grantRole(role, adminOnly);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                adminOnly,
+                distributor.RECIPIENTS_MANAGER_ROLE()
+            )
+        );
+        vm.prank(adminOnly);
+        distributor.replaceRecipient(0, makeAddr("newRecipient"));
     }
 
     /* ========== DISTRIBUTE TESTS ========== */
@@ -177,7 +261,7 @@ contract RewardDistributorTest is TestConfig {
         RewardDistributor distributor = _deployDefaultDistributor();
 
         vm.expectRevert(RewardDistributor.NoBalance.selector);
-        vm.prank(manager);
+        vm.prank(admin);
         distributor.distribute(address(asset));
     }
 
@@ -212,7 +296,7 @@ contract RewardDistributorTest is TestConfig {
         expectedAmounts[1] = (amount * 6_000) / MAX_BPS;
 
         vm.recordLogs();
-        vm.prank(manager);
+        vm.prank(admin);
         distributor.distribute(address(asset));
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -258,10 +342,10 @@ contract RewardDistributorTest is TestConfig {
         bps[0] = splitBps;
         bps[1] = MAX_BPS - splitBps;
 
-        RewardDistributor distributor = new RewardDistributor(manager, recs, bps);
+        RewardDistributor distributor = new RewardDistributor(admin, recs, bps);
         asset.mint(address(distributor), totalAmount);
 
-        vm.prank(manager);
+        vm.prank(admin);
         distributor.distribute(address(asset));
 
         uint256 expectedA = (totalAmount * bps[0]) / MAX_BPS;
@@ -280,7 +364,7 @@ contract RewardDistributorTest is TestConfig {
         RewardDistributor distributor = _deployDefaultDistributor();
 
         vm.expectRevert(RewardDistributor.NoShares.selector);
-        vm.prank(manager);
+        vm.prank(admin);
         distributor.redeem(address(vault));
     }
 
@@ -309,7 +393,7 @@ contract RewardDistributorTest is TestConfig {
         vm.expectEmit(true, true, false, true);
         emit RewardDistributor.VaultRedeemed(address(vault), shares, depositAmount);
 
-        vm.prank(manager);
+        vm.prank(admin);
         uint256 assetsRedeemed = distributor.redeem(address(vault));
 
         assertEq(assetsRedeemed, depositAmount);
@@ -361,7 +445,7 @@ contract RewardDistributorTest is TestConfig {
         emergencyVault.activateRecovery(vaultBalance);
         assertTrue(emergencyVault.recoveryMode(), "Recovery mode should be active");
 
-        vm.prank(manager);
+        vm.prank(admin);
         uint256 assetsRedeemed = distributor.redeem(address(emergencyVault));
 
         uint256 expectedAssets = Math.mulDiv(

@@ -24,6 +24,9 @@ contract RewardDistributor is AccessControl {
     /// @notice Role identifier for addresses authorized to redeem and distribute rewards
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
+    /// @notice Role identifier for addresses authorized to manage recipient accounts
+    bytes32 public constant RECIPIENTS_MANAGER_ROLE = keccak256("RECIPIENTS_MANAGER_ROLE");
+
     /// @notice Basis points denominator (100% = 10,000 basis points)
     uint256 public constant MAX_BASIS_POINTS = 10_000;
 
@@ -72,6 +75,14 @@ contract RewardDistributor is AccessControl {
      */
     event VaultRedeemed(address indexed vault, uint256 shares, uint256 assets);
 
+    /**
+     * @notice Emitted when a recipient account is replaced by admin
+     * @param index Index in the recipients array that was updated
+     * @param oldAccount Previous recipient account
+     * @param newAccount New recipient account
+     */
+    event RecipientReplaced(uint256 indexed index, address indexed oldAccount, address indexed newAccount);
+
     /* ========== ERRORS ========== */
 
     /// @notice Thrown when recipients and basisPoints arrays have different lengths or are empty
@@ -98,17 +109,23 @@ contract RewardDistributor is AccessControl {
      */
     error DuplicateRecipient(address account);
 
+    /// @notice Thrown when attempting to access or replace recipient using invalid index
+    error InvalidRecipientIndex(uint256 index);
+
+    /// @notice Thrown when attempting to replace a recipient with the same address
+    error RecipientUnchanged();
+
     /* ========== CONSTRUCTOR ========== */
 
     /**
      * @notice Initializes the reward distributor with fixed recipients and allocations
      * @dev Recipients and their allocations are immutable after deployment.
      *      The manager receives both DEFAULT_ADMIN_ROLE and MANAGER_ROLE.
-     * @param manager_ Address that will have permission to redeem and distribute rewards
+     * @param admin_ Address that will have permission to redeem, distribute rewards and change recipients
      * @param recipients_ Array of recipient addresses
      * @param basisPoints_ Array of allocation percentages in basis points (must sum to 10,000)
      */
-    constructor(address manager_, address[] memory recipients_, uint256[] memory basisPoints_) {
+    constructor(address admin_, address[] memory recipients_, uint256[] memory basisPoints_) {
         if (recipients_.length != basisPoints_.length) {
             revert InvalidRecipientsLength();
         }
@@ -143,8 +160,9 @@ contract RewardDistributor is AccessControl {
             revert InvalidBasisPointsSum();
         }
 
-        _grantRole(DEFAULT_ADMIN_ROLE, manager_);
-        _grantRole(MANAGER_ROLE, manager_);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
+        _grantRole(MANAGER_ROLE, admin_);
+        _grantRole(RECIPIENTS_MANAGER_ROLE, admin_);
     }
 
     /* ========== MANAGER FUNCTIONS ========== */
@@ -166,6 +184,29 @@ contract RewardDistributor is AccessControl {
 
         assets = vaultContract.redeem(shares, address(this), address(this));
         emit VaultRedeemed(vault, shares, assets);
+    }
+
+    /**
+     * @notice Replaces an existing recipient address with a new account
+     * @dev Keeps allocation unchanged. Only callable by recipients manager role.
+     * @param index Position within recipients array to update
+     * @param newAccount Address that will start receiving this allocation
+     */
+    function replaceRecipient(uint256 index, address newAccount) external onlyRole(RECIPIENTS_MANAGER_ROLE) {
+        if (index >= recipients.length) revert InvalidRecipientIndex(index);
+        if (newAccount == address(0)) revert ZeroAddress();
+
+        Recipient storage recipient = recipients[index];
+        address oldAccount = recipient.account;
+
+        if (newAccount == oldAccount) revert RecipientUnchanged();
+        if (recipientExists[newAccount]) revert DuplicateRecipient(newAccount);
+
+        recipientExists[oldAccount] = false;
+        recipientExists[newAccount] = true;
+        recipient.account = newAccount;
+
+        emit RecipientReplaced(index, oldAccount, newAccount);
     }
 
     /**
