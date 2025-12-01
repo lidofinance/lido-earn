@@ -106,7 +106,7 @@ contract ERC4626Adapter is EmergencyVault {
             targetAssets = TARGET_VAULT.convertToAssets(targetShares);
         }
         if (emergencyMode) {
-            return targetAssets + ASSET.balanceOf(address(this));
+            targetAssets += ASSET.balanceOf(address(this));
         }
     }
 
