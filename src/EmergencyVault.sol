@@ -167,6 +167,12 @@ abstract contract EmergencyVault is Vault {
     /// @notice Thrown when trying to activate recovery without emergency mode being active
     error EmergencyModeNotActive();
 
+    /// @notice Thrown when trying to activate recovery with balance being zero
+    error ZeroBalance();
+
+    /// @notice Thrown when trying to activate recovery with supply being zero
+    error ZeroSupply();
+
     /* ========== EMERGENCY FUNCTIONS ========== */
 
     /**
@@ -235,23 +241,24 @@ abstract contract EmergencyVault is Vault {
     {
         if (recoveryMode) revert RecoveryAlreadyActive();
         if (!emergencyMode) revert EmergencyModeNotActive();
-
-        uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
-        if (declaredRecoverableAmount < vaultBalance) {
-            revert RecoverableAmountMismatch(declaredRecoverableAmount, vaultBalance);
-        }
         if (declaredRecoverableAmount == 0) revert ZeroAmount();
 
         _harvestFees();
 
+        uint256 actualBalance = IERC20(asset()).balanceOf(address(this));
+        if (actualBalance < declaredRecoverableAmount) {
+            revert RecoverableAmountMismatch(declaredRecoverableAmount, actualBalance);
+        }
+        if (actualBalance == 0) revert ZeroBalance();
+
         uint256 supply = totalSupply();
-        if (supply == 0) revert ZeroAmount();
+        if (supply == 0) revert ZeroSupply();
 
         uint256 protocolBalance = getProtocolBalance();
         uint256 totalRecoverable = declaredRecoverableAmount + protocolBalance;
         uint256 implicitLoss = emergencyTotalAssets > totalRecoverable ? emergencyTotalAssets - totalRecoverable : 0;
 
-        recoveryAssets = declaredRecoverableAmount;
+        recoveryAssets = actualBalance;
         recoverySupply = supply;
         recoveryMode = true;
 

@@ -332,9 +332,9 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(vault.recoverySupply(), totalSupply);
     }
 
-    /// @notice Fuzzes that activate recovery works when amount is higher than expected.
+    /// @notice Fuzzes that activate recovery reverts when amount is higher than actual balance.
     /// @dev Verifies the revert protects against amount mismatch too high.
-    function testFuzz_activateRecovery_WorksWithHigherAmount(uint96 depositAmount) public {
+    function testFuzz_activateRecovery_RevertIf_AmountMismatch_TooHigh(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
 
@@ -347,15 +347,16 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         uint256 vaultBalance = usdc.balanceOf(address(vault));
         uint256 declaredAmount = vaultBalance + 1000;
 
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyVault.RecoverableAmountMismatch.selector, declaredAmount, vaultBalance)
+        );
         vm.prank(emergencyAdmin);
         vault.activateRecovery(declaredAmount);
-
-        assertTrue(vault.recoveryMode());
     }
 
-    /// @notice Fuzzes that activate recovery reverts when amount mismatch too low.
-    /// @dev Verifies the revert protects against amount mismatch too low.
-    function testFuzz_activateRecovery_RevertIf_AmountMismatch_TooLow(uint96 depositAmount) public {
+    /// @notice Fuzzes that activate recovery allows declaring amount equal to or less than actual balance.
+    /// @dev With new logic, admin can declare amount <= actual balance (no longer reverts for lower amounts).
+    function testFuzz_activateRecovery_AllowsDeclaringLowerAmount(uint96 depositAmount) public {
         uint256 amount = bound(uint256(depositAmount), vault.MIN_FIRST_DEPOSIT(), type(uint96).max / 2);
         usdc.mint(alice, amount);
 
@@ -369,11 +370,12 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.assume(vaultBalance > 1000);
         uint256 declaredAmount = vaultBalance - 1000;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(EmergencyVault.RecoverableAmountMismatch.selector, declaredAmount, vaultBalance)
-        );
+        // Should succeed - admin can declare lower amount than actual balance
         vm.prank(emergencyAdmin);
         vault.activateRecovery(declaredAmount);
+
+        assertTrue(vault.recoveryMode());
+        assertEq(vault.recoveryAssets(), vaultBalance);
     }
 
     /// @notice Fuzzes that activate recovery allows partial recovery.
@@ -468,9 +470,18 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(usdc.balanceOf(address(vault)), 0);
         assertTrue(vault.emergencyMode());
 
+        // Should revert with ZeroAmount when declaredRecoverableAmount is 0
         vm.expectRevert(Vault.ZeroAmount.selector);
         vm.prank(emergencyAdmin);
         vault.activateRecovery(0);
+
+        // Should revert with RecoverableAmountMismatch when vault balance is 0 but declaredAmount > 0
+        // (because the mismatch check happens before ZeroBalance check)
+        vm.expectRevert(
+            abi.encodeWithSelector(EmergencyVault.RecoverableAmountMismatch.selector, 1000, 0)
+        );
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery(1000);
     }
 
     /// @notice Fuzzes that activate recovery reverts when not emergency role.
@@ -1022,8 +1033,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(usdc.balanceOf(address(vault)), directMint);
         assertTrue(vault.emergencyMode());
 
-        // Now activateRecovery should revert with ZeroAmount due to zero supply
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        // Now activateRecovery should revert with ZeroSupply due to zero supply
+        vm.expectRevert(EmergencyVault.ZeroSupply.selector);
         vm.prank(emergencyAdmin);
         vault.activateRecovery(directMint);
     }
