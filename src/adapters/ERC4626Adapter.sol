@@ -19,6 +19,19 @@ import {EmergencyVault} from "../EmergencyVault.sol";
  *      - Uses infinite approval pattern for gas efficiency
  *      - Multi-stage emergency withdrawal with proportional payouts
  *
+ *      This adapter is designed ONLY for standard ERC20 tokens and ERC4626 vaults that
+ *      preserve 1:1 value during deposits and withdrawals.
+ *
+ *      It's not designed to be used with:
+ *      1. Fee-on-Transfer tokens (assets with transfer taxes).
+ *      2. Rebasing tokens (assets that change balance automatically).
+ *      3. Target Vaults that charge Deposit or Withdrawal fees.
+ *      4. Target Vaults with slippage on deposit/withdraw.
+ *
+ *      Using such assets or vaults will result in immediate value dilution for
+ *      existing shareholders (loss of funds) because the contract assumes that
+ *      sending X assets results in exactly X assets worth of value in the strategy.
+ *
  *      Inheritance hierarchy:
  *      Vault (abstract) → EmergencyVault (abstract) → ERC4626Adapter (concrete)
  */
@@ -139,6 +152,19 @@ contract ERC4626Adapter is EmergencyVault {
      */
     function maxWithdraw(address owner) public view override returns (uint256) {
         return Math.min(super.maxWithdraw(owner), TARGET_VAULT.maxWithdraw(address(this)));
+    }
+
+    /**
+     * @notice Returns maximum shares that can be redeemed
+     * @dev Checks if the target vault is active/liquid. In recovery mode ignores target vault.
+     * @param owner The address of the share owner
+    */
+    function maxRedeem(address owner) public view override returns (uint256) {
+        uint256 userShares = balanceOf(owner);
+        if (recoveryMode) return userShares;
+        uint256 availableAssets = TARGET_VAULT.maxWithdraw(address(this));
+        uint256 liquidityShares = _convertToShares(availableAssets, Math.Rounding.Floor);
+        return Math.min(userShares, liquidityShares);
     }
 
     /* ========== INTERNAL PROTOCOL FUNCTIONS ========== */
