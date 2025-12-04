@@ -324,7 +324,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         }
 
         _burn(shareOwner, sharesBurned);
-        lastTotalAssets = totalAssets();
+        lastTotalAssets -= assetsWithdrawn;
 
         emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsWithdrawn, sharesBurned);
     }
@@ -363,7 +363,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         if (assetsWithdrawn == 0) revert ZeroAmount();
 
         _burn(shareOwner, sharesToRedeem);
-        lastTotalAssets = totalAssets();
+        lastTotalAssets -= assetsWithdrawn;
 
         emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsWithdrawn, sharesToRedeem);
     }
