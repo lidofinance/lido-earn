@@ -25,6 +25,17 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertEq(vaultMaxDeposit, 0, "MaxDeposit should be 0 when paused");
     }
 
+    /// @notice Tests that max deposit returns zero when emergency mode is active.
+    /// @dev Emergency mode blocks new exposure even if the vault is not formally paused.
+    function test_MaxDeposit_ReturnsZeroInEmergencyMode() public {
+        vm.prank(address(this));
+        vault.activateEmergencyMode();
+
+        uint256 vaultMaxDeposit = vault.maxDeposit(alice);
+
+        assertEq(vaultMaxDeposit, 0, "MaxDeposit should be 0 during emergency mode");
+    }
+
     /// @notice Tests that max mint respects target vault limits.
     /// @dev Validates that max mint respects target vault limits.
     function test_MaxMint_RespectsTargetVaultLimits() public {
@@ -46,6 +57,17 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         uint256 maxMint = vault.maxMint(alice);
 
         assertEq(maxMint, 0, "MaxMint should be 0 when paused");
+    }
+
+    /// @notice Tests that max mint returns zero when emergency mode is active.
+    /// @dev Ensures integrations see zero capacity once emergency mode triggers.
+    function test_MaxMint_ReturnsZeroInEmergencyMode() public {
+        vm.prank(address(this));
+        vault.activateEmergencyMode();
+
+        uint256 maxMint = vault.maxMint(alice);
+
+        assertEq(maxMint, 0, "MaxMint should be 0 during emergency mode");
     }
 
     /// @notice Ensures deposit reverts when exceeds max deposit.

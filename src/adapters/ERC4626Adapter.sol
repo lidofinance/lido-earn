@@ -129,7 +129,7 @@ contract ERC4626Adapter is EmergencyVault {
      * @return Maximum assets that can be deposited (0 if paused, otherwise target vault capacity)
      */
     function maxDeposit(address /* user */ ) public view override returns (uint256) {
-        if (paused()) return 0;
+        if (paused() || emergencyMode) return 0;
         return TARGET_VAULT.maxDeposit(address(this));
     }
 
@@ -139,7 +139,7 @@ contract ERC4626Adapter is EmergencyVault {
      * @return Maximum shares that can be minted (0 if paused, otherwise converted from target vault capacity)
      */
     function maxMint(address /* user */ ) public view override returns (uint256) {
-        if (paused()) return 0;
+        if (paused() || emergencyMode) return 0;
         uint256 maxAssets = TARGET_VAULT.maxDeposit(address(this));
         return _convertToShares(maxAssets, Math.Rounding.Floor);
     }
