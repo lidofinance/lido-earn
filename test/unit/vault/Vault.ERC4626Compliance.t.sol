@@ -169,6 +169,20 @@ contract VaultERC4626ComplianceTest is VaultTestBase {
         assertEq(assets, 0, "Converting 0 shares should return 0 assets");
     }
 
+    /// @notice Test that convertToAssets reflects unrealized profits even before harvest
+    function test_ConvertToAssets_IncreasesWithUnrealizedProfit() public {
+        uint256 aliceShares = vault.balanceOf(alice);
+        uint256 assetsBefore = vault.convertToAssets(aliceShares);
+
+        uint256 profit = 10_000e6;
+        asset.mint(address(vault), profit);
+
+        uint256 assetsAfter = vault.convertToAssets(aliceShares);
+        assertApproxEqAbs(
+            assetsAfter, assetsBefore + profit, 1, "convertToAssets should grow when vault balance increases"
+        );
+    }
+
     /* ========== ASSET/SHARE RATIO TESTS ========== */
 
     /// @notice Test that deposit returns shares matching preview
