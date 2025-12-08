@@ -229,6 +229,7 @@ contract RewardDistributor is AccessControl {
             revert NoBalance();
         }
 
+        uint256 totalAmount;
         uint256 recipientsLength = recipients.length;
         for (uint256 i = 0; i < recipientsLength; i++) {
             Recipient memory recipient = recipients[i];
@@ -239,9 +240,11 @@ contract RewardDistributor is AccessControl {
                 tokenContract.safeTransfer(recipient.account, amount);
                 emit RecipientPaid(recipient.account, token, amount);
             }
+
+            totalAmount += amount;
         }
 
-        emit RewardsDistributed(token, balance);
+        emit RewardsDistributed(token, totalAmount);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
