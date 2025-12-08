@@ -21,7 +21,7 @@ import {Vault} from "./Vault.sol";
  *
  *      Emergency Flow:
  *      1. Admin calls emergencyWithdraw() as many times as needed to recover funds from protocol
- *         - First call snapshots emergencyTotalAssets and pauses vault
+ *         - First call snapshots emergencyTotalAssets and enables emergency mode
  *         - Normal withdraw/redeem are blocked during emergency mode
  *         - Can be called multiple times if protocol has partial liquidity
  *

@@ -13,8 +13,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  *      1. `redeem(vault)`: Converts vault shares held by this contract into underlying assets
  *      2. `distribute(token)`: Distributes token balance to all recipients proportionally
  *
- *      Access control: Only MANAGER_ROLE can trigger redemptions and distributions.
- *      Recipient configuration is immutable after deployment.
+ *      Access control:
+ *      - MANAGER_ROLE can trigger redemptions and distributions.
+ *      - RECIPIENTS_MANAGER_ROLE can rotate recipient addresses (recipient shares are immutable).
  */
 contract RewardDistributor is AccessControl {
     using SafeERC20 for IERC20;
