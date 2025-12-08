@@ -89,7 +89,7 @@ Base contract implementing **ERC4626**, **ERC20Permit**, **AccessControl**, **Pa
 
   * `DEFAULT_ADMIN_ROLE`: Can grant and revoke all roles
   * `PAUSER_ROLE`: Can pause and unpause the vault (blocks deposits/mints)
-  * `MANAGER_ROLE`: Can update fee parameters and treasury address
+  * `MANAGER_ROLE`: Can update fee parameters, update treasury address, and recover accidentally sent ERC20 tokens
   * `EMERGENCY_ROLE`: Can trigger emergency withdrawal and manage protocol approvals
 
 #### `constructor`
@@ -354,6 +354,34 @@ function setTreasury(address newTreasury) external onlyRole(MANAGER_ROLE)
 
   * Triggers `_harvestFees()` *before* updating the address.
   * Ensures fees accrued up to this point are minted to the old treasury address.
+
+#### `recoverERC20`
+
+Recovers accidentally sent ERC20 tokens from the vault.
+
+```solidity
+function recoverERC20(address token, address receiver) external onlyRole(MANAGER_ROLE)
+```
+
+**Constraints:**
+
+  * `token` must not be the zero address.
+  * `receiver` must not be the zero address.
+  * `token` must not be the vault's main asset (reverts with `CannotRecoverVaultAsset`).
+  * Token balance in the vault must be greater than zero (reverts with `ZeroAmount`).
+
+**Notes:**
+
+  * Transfers the **entire balance** of the specified token held by the vault to the receiver.
+  * Designed to recover tokens that were accidentally sent to the vault contract address.
+  * Cannot be used to extract the vault's primary asset, protecting user funds.
+  * Emits `TokenRecovered(address indexed token, address indexed receiver, uint256 amount)` event.
+  * Only callable by addresses with `MANAGER_ROLE`.
+  * Useful for recovering:
+    - Airdrops sent to the vault
+    - Mistakenly transferred tokens
+    - Rewards in alternative tokens
+  * **Security:** The restriction on recovering the vault asset prevents admin abuse of user deposits.
 
 -----
 

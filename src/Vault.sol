@@ -111,6 +111,12 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     /// @param timestamp Block timestamp when vault was unpaused
     event VaultUnpaused(uint256 timestamp);
 
+    /// @notice Emitted when tokens are recovered from the vault
+    /// @param token Address of the recovered token
+    /// @param receiver Address that received the tokens
+    /// @param amount Amount of tokens recovered
+    event TokenRecovered(address indexed token, address indexed receiver, uint256 amount);
+
     /* ========== ERRORS ========== */
 
     /// @notice Thrown when an operation is attempted with zero amount
@@ -158,6 +164,20 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
     /// @notice Thrown when attempting to update treasury to the same address
     error InvalidTreasuryAddress();
+
+    /// @notice Thrown when recovery token address is zero
+    error RecoveryTokenZeroAddress();
+
+    /// @notice Thrown when recovery receiver address is zero
+    error RecoveryReceiverZeroAddress();
+
+    /// @notice Thrown when attempting to recover the vault's main asset
+    /// @param asset The vault's main asset address that cannot be recovered
+    error CannotRecoverVaultAsset(address asset);
+
+    /// @notice Thrown when token balance is zero and cannot be recovered
+    /// @param token The token address with zero balance
+    error RecoveryTokenBalanceZero(address token);
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -513,6 +533,27 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
         emit VaultUnpaused(block.timestamp);
+    }
+
+    /* ========== TOKEN RECOVERY ========== */
+
+    /**
+     * @notice Recovers accidentally sent ERC20 tokens from the vault
+     * @dev Only callable by MANAGER_ROLE. Cannot recover the vault's main asset.
+     *      Transfers the entire balance of the specified token to the receiver.
+     * @param token Address of the ERC20 token to recover
+     * @param receiver Address that will receive the recovered tokens
+     */
+    function recoverERC20(address token, address receiver) external onlyRole(MANAGER_ROLE) {
+        if (token == address(0)) revert RecoveryTokenZeroAddress();
+        if (receiver == address(0)) revert RecoveryReceiverZeroAddress();
+        if (token == asset()) revert CannotRecoverVaultAsset(token);
+
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        if (balance == 0) revert RecoveryTokenBalanceZero(token);
+
+        SafeERC20.safeTransfer(IERC20(token), receiver, balance);
+        emit TokenRecovered(token, receiver, balance);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
