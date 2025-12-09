@@ -79,6 +79,12 @@ To satisfy institutional requirements for predictable fee payouts, the architect
 
 This separation mitigates the risk of **Arbitrary Fee Redirection** on already captured rewards: once shares are minted to the treasury/distributor, an attacker cannot siphon those assets without interacting with the distributor’s manual `redeem`/`distribute` flow (which honors its current recipient list). Administrators retain the ability to rotate the treasury address or update recipients for future accruals—needed for operational key rotation—but historical fee shares already in the distributor remain bound to the configured split.
 
+## Deposit/Withdrawal Flow
+
+The following diagram illustrates the complete flow of deposits and withdrawals through the vault system:
+
+![Deposit/Withdrawal Flow](dist/flow.png)
+
 ## Technical Specification
 
 ### Contract `Vault` (Abstract)
