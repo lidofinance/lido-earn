@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -229,12 +230,7 @@ abstract contract EmergencyVault is Vault {
      *      Emits RecoveryActivated(actualBalance, totalSupply, protocolBalance, implicitLoss)
      *      where implicitLoss = max(0, emergencyTotalAssets - actualBalance)
      */
-    function activateRecovery()
-        external
-        virtual
-        onlyRole(EMERGENCY_ROLE)
-        nonReentrant
-    {
+    function activateRecovery() external virtual onlyRole(EMERGENCY_ROLE) nonReentrant {
         if (recoveryMode) revert RecoveryAlreadyActive();
         if (!emergencyMode) revert EmergencyModeNotActive();
 
@@ -259,7 +255,7 @@ abstract contract EmergencyVault is Vault {
     /* ========== OVERRIDES TO BLOCK NORMAL OPERATIONS DURING EMERGENCY ========== */
 
     /**
-     * @notice Deposit assets (blocked during emergency mode)
+     * @inheritdoc Vault
      * @dev Reverts if emergency mode is active to block new exposure while recovering funds.
      */
     function deposit(uint256 assetsToDeposit, address shareReceiver) public virtual override returns (uint256) {
@@ -268,7 +264,7 @@ abstract contract EmergencyVault is Vault {
     }
 
     /**
-     * @notice Mint shares (blocked during emergency mode)
+     * @inheritdoc Vault
      * @dev Reverts if emergency mode is active to block new exposure while recovering funds.
      */
     function mint(uint256 sharesToMint, address shareReceiver) public virtual override returns (uint256) {
@@ -277,9 +273,9 @@ abstract contract EmergencyVault is Vault {
     }
 
     /**
-     * @notice Withdraw assets (blocked during emergency mode)
+     * @inheritdoc Vault
      * @dev Reverts if emergency mode is active to preserve pro-rata fairness.
-     *      Users must use emergencyRedeem() after recovery is activated.
+     *      Users must use redeem() after recovery is activated.
      */
     function withdraw(uint256 assetsToWithdraw, address assetReceiver, address shareOwner)
         public
@@ -292,7 +288,7 @@ abstract contract EmergencyVault is Vault {
     }
 
     /**
-     * @notice Redeem shares (blocked during emergency mode, allowed during recovery)
+     * @inheritdoc Vault
      * @dev During recovery mode, automatically delegates to emergencyRedeem() to enable
      *      standard IERC4626 interface for treasury and other integrations.
      *      During emergency mode (before recovery), redemptions are blocked to preserve pro-rata fairness.
@@ -308,6 +304,10 @@ abstract contract EmergencyVault is Vault {
         return super.redeem(sharesToRedeem, assetReceiver, shareOwner);
     }
 
+    /**
+     * @inheritdoc Vault
+     * @dev Disabled during emergency mode.
+     */
     function harvestFees() external override nonReentrant {
         if (emergencyMode) revert DisabledDuringEmergencyMode();
         _harvestFees();
@@ -349,6 +349,67 @@ abstract contract EmergencyVault is Vault {
         IERC20(asset()).safeTransfer(receiver, assets);
 
         emit Withdrawn(msg.sender, receiver, owner, assets, shares);
+    }
+
+    /* ========== ERC4626 CONVERSION & PREVIEW OVERRIDES ========== */
+
+    /**
+     * @inheritdoc ERC4626
+     * @dev Uses the recovery snapshot rate during recovery mode.
+     */
+    function convertToAssets(uint256 shares) public view virtual override returns (uint256) {
+        if (recoveryMode) {
+            return shares.mulDiv(recoveryAssets, recoverySupply, Math.Rounding.Floor);
+        }
+        return super.convertToAssets(shares);
+    }
+
+    /**
+     * @inheritdoc ERC4626
+     * @dev Uses the recovery snapshot rate during recovery mode.
+     */
+    function convertToShares(uint256 assets) public view virtual override returns (uint256) {
+        if (recoveryMode) {
+            return assets.mulDiv(recoverySupply, recoveryAssets, Math.Rounding.Floor);
+        }
+        return super.convertToShares(assets);
+    }
+
+    /**
+     * @inheritdoc Vault
+     * @dev Reverts during emergency mode and uses the recovery snapshot rate during recovery mode.
+     */
+    function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
+        if (recoveryMode) return convertToAssets(shares);
+        if (emergencyMode) revert DisabledDuringEmergencyMode();
+        return super.previewRedeem(shares);
+    }
+
+    /**
+     * @inheritdoc Vault
+     * @dev Reverts during emergency mode.
+     */
+    function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
+        if (emergencyMode) revert DisabledDuringEmergencyMode();
+        return super.previewWithdraw(assets);
+    }
+
+    /**
+     * @inheritdoc Vault
+     * @dev Reverts during emergency mode.
+     */
+    function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
+        if (emergencyMode) revert DisabledDuringEmergencyMode();
+        return super.previewDeposit(assets);
+    }
+
+    /**
+     * @inheritdoc Vault
+     * @dev Reverts during emergency mode.
+     */
+    function previewMint(uint256 shares) public view virtual override returns (uint256) {
+        if (emergencyMode) revert DisabledDuringEmergencyMode();
+        return super.previewMint(shares);
     }
 
     /* ========== INTERNAL VIRTUAL FUNCTIONS ========== */

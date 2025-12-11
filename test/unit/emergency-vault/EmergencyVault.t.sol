@@ -1201,11 +1201,246 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + assetsReceived, "Treasury should receive assets");
 
         // Verify assets are calculated correctly (pro-rata)
-        uint256 expectedAssets = treasuryShares.mulDiv(
-            vault.recoveryAssets(),
-            vault.recoverySupply(),
-            Math.Rounding.Floor
-        );
+        uint256 expectedAssets =
+            treasuryShares.mulDiv(vault.recoveryAssets(), vault.recoverySupply(), Math.Rounding.Floor);
         assertEq(assetsReceived, expectedAssets, "Assets should match pro-rata calculation");
+    }
+
+    function testFuzz_convertToAssets_RecoveryMode(uint256 depositAmount) public {
+        vm.assume(depositAmount > 0 && depositAmount <= type(uint96).max - 1);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        uint256 aliceShares = vault.deposit(depositAmount, alice);
+
+        // Simulate profit to generate fees
+        uint256 profitAmount = depositAmount / 13;
+        usdc.mint(address(targetVault), profitAmount);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery();
+
+        // Verify recovery mode is active
+        assertTrue(vault.recoveryMode(), "Recovery mode should be active");
+
+        uint256 aliceBalanceBefore = usdc.balanceOf(alice);
+        uint256 aliceAssets = vault.convertToAssets(aliceShares);
+
+        uint256 expectedAssets = aliceShares.mulDiv(vault.recoveryAssets(), vault.recoverySupply(), Math.Rounding.Floor);
+        assertEq(aliceAssets, expectedAssets, "Assets should match pro-rata calculation");
+
+        vm.prank(alice);
+        vault.redeem(aliceShares, alice, alice);
+
+        assertEq(usdc.balanceOf(alice), aliceBalanceBefore + aliceAssets, "Assets should be redeemed");
+    }
+
+    function testFuzz_convertToShares_RecoveryMode(uint256 depositAmount, uint256 withdrawAmount) public {
+        vm.assume(depositAmount > 1 && depositAmount <= type(uint96).max - 1);
+        vm.assume(withdrawAmount > 1 && withdrawAmount <= depositAmount);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        // Simulate profit to generate fees
+        uint256 profitAmount = depositAmount / 13;
+        usdc.mint(address(targetVault), profitAmount);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery();
+
+        // Verify recovery mode is active
+        assertTrue(vault.recoveryMode(), "Recovery mode should be active");
+
+        uint256 aliceBalanceBefore = usdc.balanceOf(alice);
+        uint256 sharesToRedeem = vault.convertToShares(withdrawAmount);
+        uint256 expectedShares =
+            withdrawAmount.mulDiv(vault.recoverySupply(), vault.recoveryAssets(), Math.Rounding.Floor);
+        assertEq(sharesToRedeem, expectedShares, "Assets should match pro-rata calculation");
+
+        vm.prank(alice);
+        vault.redeem(sharesToRedeem, alice, alice);
+
+        assertApproxEqAbs(usdc.balanceOf(alice), aliceBalanceBefore + withdrawAmount, 2, "Assets should be redeemed");
+    }
+
+    function testFuzz_previewRedeem_RecoveryMode(uint256 depositAmount) public {
+        vm.assume(depositAmount > 100 && depositAmount <= type(uint96).max - 1);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        uint256 aliceShares = vault.deposit(depositAmount, alice);
+
+        // Simulate profit to generate fees
+        uint256 profitAmount = depositAmount / 13;
+        usdc.mint(address(targetVault), profitAmount);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery();
+
+        // Verify recovery mode is active
+        assertTrue(vault.recoveryMode(), "Recovery mode should be active");
+
+        uint256 sharesToPreview = aliceShares / 2;
+        uint256 expectedAssets =
+            sharesToPreview.mulDiv(vault.recoveryAssets(), vault.recoverySupply(), Math.Rounding.Floor);
+
+        uint256 previewedAssets = vault.previewRedeem(sharesToPreview);
+        assertEq(previewedAssets, expectedAssets, "Preview should match recovery ratio");
+    }
+
+    function test_convertToAssets_EmergencyModeUsesLiveRatio() public {
+        uint256 depositAmount = scaleAmount(10_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        uint256 aliceShares = vault.deposit(depositAmount, alice);
+
+        uint256 expectedBefore = vault.convertToAssets(aliceShares);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        uint256 convertedAfter = vault.convertToAssets(aliceShares);
+        assertEq(convertedAfter, expectedBefore, "Conversion should remain unchanged in emergency");
+    }
+
+    function test_convertToShares_EmergencyModeUsesLiveRatio() public {
+        uint256 depositAmount = scaleAmount(20_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        uint256 targetAssets = depositAmount / 2;
+        uint256 expectedBefore = vault.convertToShares(targetAssets);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        uint256 convertedAfter = vault.convertToShares(targetAssets);
+        assertEq(convertedAfter, expectedBefore, "Conversion should remain unchanged in emergency");
+    }
+
+    function test_previewRedeem_RevertsIf_EmergencyMode() public {
+        uint256 depositAmount = scaleAmount(5_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        vm.expectRevert(EmergencyVault.DisabledDuringEmergencyMode.selector);
+        vault.previewRedeem(shares);
+    }
+
+    function test_previewRedeem_RecoveryModeUsesSnapshot() public {
+        uint256 depositAmount = scaleAmount(5_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery();
+
+        uint256 sharesToPreview = shares / 2;
+        if (sharesToPreview == 0) sharesToPreview = shares;
+
+        uint256 expectedAssets =
+            sharesToPreview.mulDiv(vault.recoveryAssets(), vault.recoverySupply(), Math.Rounding.Floor);
+        uint256 previewedAssets = vault.previewRedeem(sharesToPreview);
+        assertEq(previewedAssets, expectedAssets, "Recovery preview should use snapshot ratio");
+    }
+
+    function test_previewWithdraw_RevertsIf_EmergencyMode() public {
+        uint256 depositAmount = scaleAmount(8_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        vm.expectRevert(EmergencyVault.DisabledDuringEmergencyMode.selector);
+        vault.previewWithdraw(depositAmount / 2);
+    }
+
+    function test_previewWithdraw_RevertsIf_RecoveryMode() public {
+        uint256 depositAmount = scaleAmount(8_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery();
+
+        vm.expectRevert(EmergencyVault.DisabledDuringEmergencyMode.selector);
+        vault.previewWithdraw(depositAmount / 2);
+    }
+
+    function test_previewDeposit_RevertsIf_EmergencyMode() public {
+        uint256 depositAmount = scaleAmount(2_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        vm.expectRevert(EmergencyVault.DisabledDuringEmergencyMode.selector);
+        vault.previewDeposit(depositAmount);
+    }
+
+    function test_previewDeposit_RevertsIf_RecoveryMode() public {
+        uint256 depositAmount = scaleAmount(2_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery();
+
+        vm.expectRevert(EmergencyVault.DisabledDuringEmergencyMode.selector);
+        vault.previewDeposit(depositAmount);
+    }
+
+    function test_previewMint_RevertsIf_EmergencyMode() public {
+        uint256 depositAmount = scaleAmount(4_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+
+        vm.expectRevert(EmergencyVault.DisabledDuringEmergencyMode.selector);
+        vault.previewMint(shares / 2);
+    }
+
+    function test_previewMint_RevertsIf_RecoveryMode() public {
+        uint256 depositAmount = scaleAmount(4_000);
+        usdc.mint(alice, depositAmount);
+        vm.prank(alice);
+        uint256 shares = vault.deposit(depositAmount, alice);
+
+        vm.prank(emergencyAdmin);
+        vault.emergencyWithdraw();
+        vm.prank(emergencyAdmin);
+        vault.activateRecovery();
+
+        vm.expectRevert(EmergencyVault.DisabledDuringEmergencyMode.selector);
+        vault.previewMint(shares / 2);
     }
 }

@@ -374,6 +374,13 @@
 | test_activateRecovery_TracksImplicitLoss_WithPartialWithdrawal | Partial withdrawal loss | Tracks implicit loss with partial recovery, distinguishes stuck funds from actual loss |
 | test_TreasuryRedeem_DuringRecoveryMode | Treasury recovery redemption | Treasury (RewardDistributor) can redeem fee shares via standard redeem() in recovery mode, receives pro-rata assets |
 | test_getProtocolBalance_ReturnsCorrectBalance | Balance query | Returns accurate protocol balance |
+| test_convertToAssets_EmergencyModeUsesLiveRatio | Conversion during emergency | convertToAssets returns same live ratio before vs after emergencyWithdraw |
+| test_convertToShares_EmergencyModeUsesLiveRatio | Conversion during emergency | convertToShares returns same live ratio before vs after emergencyWithdraw |
+| test_previewRedeem_EmergencyModeReverts | Preview blocking (redeem) | previewRedeem reverts with DisabledDuringEmergencyMode while emergency mode is active |
+| test_previewRedeem_RecoveryModeUsesSnapshot | Preview accuracy (recovery) | previewRedeem matches recovery snapshot ratio during recovery mode |
+| test_previewWithdraw_EmergencyModeReverts | Preview blocking (withdraw) | previewWithdraw reverts with DisabledDuringEmergencyMode during emergency/recovery |
+| test_previewDeposit_EmergencyModeReverts | Preview blocking (deposit) | previewDeposit reverts with DisabledDuringEmergencyMode during emergency/recovery |
+| test_previewMint_EmergencyModeReverts | Preview blocking (mint) | previewMint reverts with DisabledDuringEmergencyMode during emergency/recovery |
 
 ---
 
