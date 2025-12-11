@@ -434,7 +434,6 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint256 profit = currentTotal - lastTotalAssets;
         uint256 feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
 
-        if (feeAmount > profit) feeAmount = profit;
         if (feeAmount > 0 && feeAmount < currentTotal) {
             return feeAmount.mulDiv(supply, currentTotal - feeAmount, Math.Rounding.Ceil);
         }
@@ -681,7 +680,6 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         uint256 profit = currentTotal - totalAssets;
         feeAmount = profit.mulDiv(rewardFee, MAX_BASIS_POINTS, Math.Rounding.Ceil);
-        if (feeAmount > profit) feeAmount = profit;
     }
 
     /* ========== PROTOCOL APPROVAL MANAGEMENT ========== */
