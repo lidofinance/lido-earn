@@ -506,6 +506,94 @@ function _emergencyRedeem(uint256 shares, address receiver, address owner) inter
   * Called automatically by the standard `redeem` function when `recoveryMode` is active.
   * Burns the user's shares and transfers the calculated assets.
 
+#### `convertToAssets`
+
+Converts shares to assets, respecting recovery snapshots.
+
+```solidity
+function convertToAssets(uint256 shares) public view virtual override returns (uint256)
+```
+
+**Behavior:**
+
+  * **Recovery Mode:** Uses the snapshot ratio (`shares * recoveryAssets / recoverySupply`).
+  * **Normal Mode:** Delegates to the base `Vault` implementation.
+
+**Notes:**
+
+  * Floor rounding ensures the returned amount never exceeds actual redeemable assets.
+  * Remains callable during emergency mode (even though redeems are blocked) so integrations can observe the live value.
+
+#### `convertToShares`
+
+Inverse conversion from assets to shares.
+
+```solidity
+function convertToShares(uint256 assets) public view virtual override returns (uint256)
+```
+
+**Behavior:**
+
+  * **Recovery Mode:** Uses the inverse snapshot ratio (`assets * recoverySupply / recoveryAssets`).
+  * **Normal Mode:** Delegates to `Vault`.
+
+**Notes:**
+
+  * Floor rounding ensures the caller never receives more shares than mint/redeem would allow.
+
+#### `previewRedeem`
+
+ERC4626 preview for `redeem`.
+
+```solidity
+function previewRedeem(uint256 shares) public view virtual override returns (uint256)
+```
+
+**Behavior:**
+
+  * **Recovery Mode:** Returns the snapshot ratio (mirrors `convertToAssets(shares)`).
+  * **Emergency Mode:** Reverts with `DisabledDuringEmergencyMode` to signal that redeems are blocked.
+  * **Normal Mode:** Delegates to `Vault.previewRedeem`.
+
+#### `previewWithdraw`
+
+ERC4626 preview for `withdraw`.
+
+```solidity
+function previewWithdraw(uint256 assets) public view virtual override returns (uint256)
+```
+
+**Behavior:**
+
+  * Reverts with `DisabledDuringEmergencyMode` whenever emergency mode is active (including recovery), because withdraws are not permitted.
+  * Delegates to the base implementation during normal operation.
+
+#### `previewDeposit`
+
+ERC4626 preview for `deposit`.
+
+```solidity
+function previewDeposit(uint256 assets) public view virtual override returns (uint256)
+```
+
+**Behavior:**
+
+  * Reverts with `DisabledDuringEmergencyMode` while emergency mode is active.
+  * Delegates to `Vault.previewDeposit` otherwise.
+
+#### `previewMint`
+
+ERC4626 preview for `mint`.
+
+```solidity
+function previewMint(uint256 shares) public view virtual override returns (uint256)
+```
+
+**Behavior:**
+
+  * Reverts with `DisabledDuringEmergencyMode` while emergency mode is active.
+  * Delegates to `Vault.previewMint` otherwise.
+
 -----
 
 ### Contract `ERC4626Adapter` (Concrete)
