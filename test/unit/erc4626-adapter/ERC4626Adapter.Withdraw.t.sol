@@ -74,7 +74,7 @@ contract ERC4626AdapterWithdrawTest is ERC4626AdapterTestBase {
         uint256 cap = withdrawAssets - 1;
         targetVault.setLiquidityCap(cap);
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientLiquidity.selector, withdrawAssets, cap));
+        vm.expectRevert(abi.encodeWithSelector(ERC4626Adapter.TargetVaultInsufficientLiquidity.selector, withdrawAssets, cap));
 
         vm.prank(alice);
         vault.withdraw(withdrawAssets, alice, alice);

@@ -98,22 +98,6 @@ contract VaultWithdrawTest is VaultTestBase {
         vault.withdraw(20_000e6, alice, alice);
     }
 
-    /// @notice Ensures withdraw reverts when protocol returns less assets.
-    /// @dev Verifies the revert protects against protocol returns less assets.
-    function test_Withdraw_RevertIf_ProtocolReturnsLessAssets() public {
-        vm.prank(alice);
-        vault.deposit(50_000e6, alice);
-
-        vault.setForcedShortfall(1);
-
-        uint256 withdrawAmount = 10_000e6;
-        uint256 returnedAmount = withdrawAmount - 1;
-
-        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientLiquidity.selector, withdrawAmount, returnedAmount));
-        vm.prank(alice);
-        vault.withdraw(withdrawAmount, alice, alice);
-    }
-
     /// @notice Tests that withdraw delegated with approval.
     /// @dev Validates that withdraw delegated with approval.
     function test_Withdraw_DelegatedWithApproval() public {

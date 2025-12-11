@@ -127,11 +127,6 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
     /// @param available Amount of shares available
     error InsufficientShares(uint256 requested, uint256 available);
 
-    /// @notice Thrown when protocol doesn't have enough liquidity for withdrawal
-    /// @param requested Amount of assets requested
-    /// @param available Amount of assets available
-    error InsufficientLiquidity(uint256 requested, uint256 available);
-
     /// @notice Thrown when shares amount is invalid
     /// @param shares The invalid shares amount
     error InvalidSharesAmount(uint256 shares);
@@ -243,11 +238,8 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         SafeERC20.safeTransferFrom(IERC20(asset()), msg.sender, address(this), assetsToDeposit);
 
-        uint256 protocolSharesReceived = _depositToProtocol(assetsToDeposit);
-        if (protocolSharesReceived == 0) revert ZeroAmount();
-
+        _depositToProtocol(assetsToDeposit);
         _mint(shareReceiver, sharesMinted);
-
         lastTotalAssets += assetsToDeposit;
 
         emit Deposited(msg.sender, shareReceiver, assetsToDeposit, sharesMinted);
@@ -284,9 +276,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
         SafeERC20.safeTransferFrom(IERC20(asset()), msg.sender, address(this), assetsRequired);
 
-        uint256 protocolSharesReceived = _depositToProtocol(assetsRequired);
-        if (protocolSharesReceived == 0) revert ZeroAmount();
-
+        _depositToProtocol(assetsRequired);
         _mint(shareReceiver, sharesToMint);
         lastTotalAssets += assetsRequired;
 
@@ -323,16 +313,11 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
             _spendAllowance(shareOwner, msg.sender, sharesBurned);
         }
 
-        uint256 assetsWithdrawn = _withdrawFromProtocol(assetsToWithdraw, assetReceiver);
-
-        if (assetsWithdrawn < assetsToWithdraw) {
-            revert InsufficientLiquidity(assetsToWithdraw, assetsWithdrawn);
-        }
-
+        _withdrawFromProtocol(assetsToWithdraw, assetReceiver);
         _burn(shareOwner, sharesBurned);
-        lastTotalAssets -= assetsWithdrawn;
+        lastTotalAssets -= assetsToWithdraw;
 
-        emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsWithdrawn, sharesBurned);
+        emit Withdrawn(msg.sender, assetReceiver, shareOwner, assetsToWithdraw, sharesBurned);
     }
 
     /**
@@ -363,11 +348,9 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
             revert InsufficientShares(sharesToRedeem, balanceOf(shareOwner));
         }
 
-        uint256 assetsToWithdraw = _convertToAssets(sharesToRedeem, Math.Rounding.Floor);
-        assetsWithdrawn = _withdrawFromProtocol(assetsToWithdraw, assetReceiver);
+        assetsWithdrawn = _convertToAssets(sharesToRedeem, Math.Rounding.Floor);
 
-        if (assetsWithdrawn == 0) revert ZeroAmount();
-
+        _withdrawFromProtocol(assetsWithdrawn, assetReceiver);
         _burn(shareOwner, sharesToRedeem);
         lastTotalAssets -= assetsWithdrawn;
 

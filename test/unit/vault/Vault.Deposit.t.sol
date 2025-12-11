@@ -422,36 +422,4 @@ contract VaultDepositTest is VaultTestBase {
         // Should be very close (within 1 wei for rounding)
         assertApproxEqAbs(actualAssets, previewedAssets, 1);
     }
-
-    /* ========== COVERAGE TESTS FOR EDGE CASES ========== */
-
-    /// @dev Coverage: Vault.sol line 116 - if (protocolSharesReceived == 0) revert ZeroAmount();
-    /// @notice Tests that deposit reverts when _depositToProtocol returns 0 shares
-    function test_Deposit_RevertIf_ProtocolSharesIsZero() public {
-        // Force _depositToProtocol to return 0 shares
-        MockVault(address(vault)).setForceZeroProtocolShares(true);
-
-        // Try to deposit - should revert with ZeroAmount
-        vm.startPrank(alice);
-        vm.expectRevert(Vault.ZeroAmount.selector);
-        vault.deposit(10000, alice);
-        vm.stopPrank();
-    }
-
-    /// @dev Coverage: Vault.sol line 148 - if (protocolSharesReceived == 0) revert ZeroAmount();
-    /// @notice Tests that mint reverts when _depositToProtocol returns 0 shares
-    function test_Mint_RevertIf_ProtocolSharesIsZero() public {
-        // Setup: Make a first deposit to pass MIN_FIRST_DEPOSIT check
-        vm.prank(alice);
-        vault.deposit(10000, alice);
-
-        // Force _depositToProtocol to return 0 shares
-        MockVault(address(vault)).setForceZeroProtocolShares(true);
-
-        // Try to mint - should revert with ZeroAmount
-        vm.startPrank(bob);
-        vm.expectRevert(Vault.ZeroAmount.selector);
-        vault.mint(10000, bob);
-        vm.stopPrank();
-    }
 }

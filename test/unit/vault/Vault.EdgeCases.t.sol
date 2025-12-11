@@ -41,33 +41,6 @@ contract VaultEdgeCasesTest is TestConfig {
 
     /* ========== DEPOSIT EDGE CASES ========== */
 
-    /// @notice Coverage: Vault.sol line 116 - protocolSharesReceived == 0 in deposit()
-    /// @dev Forces _depositToProtocol to return 0 shares, triggering ZeroAmount revert
-    function test_Deposit_RevertIf_ProtocolSharesReceivedIsZero() public {
-        // Setup: First user makes initial deposit to initialize vault
-        uint256 initialDeposit = MIN_FIRST_DEPOSIT * 10;
-        deal(address(asset), user1, initialDeposit * 2);
-
-        vm.startPrank(user1);
-        asset.approve(address(vault), initialDeposit);
-        vault.deposit(initialDeposit, user1);
-        vm.stopPrank();
-
-        // Force MockVault to return 0 protocol shares
-        vault.setForceZeroProtocolShares(true);
-
-        // Attempt deposit - should revert with ZeroAmount
-        uint256 depositAmount = MIN_FIRST_DEPOSIT;
-        deal(address(asset), user1, depositAmount);
-
-        vm.startPrank(user1);
-        asset.approve(address(vault), depositAmount);
-
-        vm.expectRevert(Vault.ZeroAmount.selector);
-        vault.deposit(depositAmount, user1);
-        vm.stopPrank();
-    }
-
     /// @notice Coverage: Vault.sol line 111 - sharesMinted == 0 in deposit()
     /// @dev This branch is extremely difficult to reach naturally because:
     ///      1. If assetsToDeposit > 0 (already checked)
@@ -122,34 +95,6 @@ contract VaultEdgeCasesTest is TestConfig {
     }
 
     /* ========== MINT EDGE CASES ========== */
-
-    /// @notice Coverage: Vault.sol line 148 - protocolSharesReceived == 0 in mint()
-    /// @dev Forces _depositToProtocol to return 0 shares, triggering ZeroAmount revert
-    function test_Mint_RevertIf_ProtocolSharesReceivedIsZero() public {
-        // Setup: First user makes initial deposit to initialize vault
-        uint256 initialDeposit = MIN_FIRST_DEPOSIT * 10;
-        deal(address(asset), user1, initialDeposit * 2);
-
-        vm.startPrank(user1);
-        asset.approve(address(vault), initialDeposit);
-        vault.deposit(initialDeposit, user1);
-        vm.stopPrank();
-
-        // Force MockVault to return 0 protocol shares
-        vault.setForceZeroProtocolShares(true);
-
-        // Attempt mint - should revert with ZeroAmount
-        uint256 sharesToMint = 1000e6;
-        uint256 assetsRequired = vault.previewMint(sharesToMint);
-        deal(address(asset), user1, assetsRequired);
-
-        vm.startPrank(user1);
-        asset.approve(address(vault), assetsRequired);
-
-        vm.expectRevert(Vault.ZeroAmount.selector);
-        vault.mint(sharesToMint, user1);
-        vm.stopPrank();
-    }
 
     /// @notice Coverage: Vault.sol line 139 - assetsRequired == 0 in mint()
     /// @dev This branch is extremely difficult to reach because:
@@ -341,66 +286,6 @@ contract VaultEdgeCasesTest is TestConfig {
     }
 
     /* ========== ADDITIONAL EDGE CASE SCENARIOS ========== */
-
-    /// @notice Test deposit flow with forced zero protocol shares after initial deposits
-    function test_EdgeCase_DepositAfterMultipleDeposits_ZeroProtocolShares() public {
-        // Setup: Multiple users make deposits
-        address user2 = makeAddr("user2");
-        uint256 deposit1 = MIN_FIRST_DEPOSIT * 100;
-        uint256 deposit2 = MIN_FIRST_DEPOSIT * 200;
-
-        deal(address(asset), user1, deposit1);
-        deal(address(asset), user2, deposit2);
-
-        vm.prank(user1);
-        asset.approve(address(vault), deposit1);
-        vm.prank(user1);
-        vault.deposit(deposit1, user1);
-
-        vm.prank(user2);
-        asset.approve(address(vault), deposit2);
-        vm.prank(user2);
-        vault.deposit(deposit2, user2);
-
-        // Now force zero protocol shares
-        vault.setForceZeroProtocolShares(true);
-
-        // New deposit should fail
-        uint256 deposit3 = MIN_FIRST_DEPOSIT;
-        deal(address(asset), user1, deposit3);
-
-        vm.startPrank(user1);
-        asset.approve(address(vault), deposit3);
-        vm.expectRevert(Vault.ZeroAmount.selector);
-        vault.deposit(deposit3, user1);
-        vm.stopPrank();
-    }
-
-    /// @notice Test mint flow with forced zero protocol shares after initial state
-    function test_EdgeCase_MintAfterDeposits_ZeroProtocolShares() public {
-        // Initialize vault
-        uint256 initialDeposit = MIN_FIRST_DEPOSIT * 100;
-        deal(address(asset), user1, initialDeposit);
-
-        vm.startPrank(user1);
-        asset.approve(address(vault), initialDeposit);
-        vault.deposit(initialDeposit, user1);
-        vm.stopPrank();
-
-        // Force zero protocol shares
-        vault.setForceZeroProtocolShares(true);
-
-        // Mint should fail
-        uint256 sharesToMint = 1000e6;
-        uint256 assetsRequired = vault.previewMint(sharesToMint);
-        deal(address(asset), user1, assetsRequired);
-
-        vm.startPrank(user1);
-        asset.approve(address(vault), assetsRequired);
-        vm.expectRevert(Vault.ZeroAmount.selector);
-        vault.mint(sharesToMint, user1);
-        vm.stopPrank();
-    }
 
     /// @notice Test fee harvesting with various profit levels and high fees
     function testFuzz_HarvestFees_VariousProfitsHighFee(uint256 profit) public {

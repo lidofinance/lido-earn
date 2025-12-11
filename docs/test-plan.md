@@ -72,8 +72,6 @@
 | test_Mint_RevertIf_Paused | Pause enforcement | Reverts with EnforcedPause |
 | test_PreviewDeposit_Accurate | Preview accuracy | Previewed shares = actual shares |
 | test_Offset_ProtectsAgainstInflationAttack | Inflation attack protection | Victim gets fair shares despite donation |
-| test_Deposit_RevertIf_ProtocolSharesIsZero | Protocol zero shares | Reverts when protocol returns 0 shares |
-| test_Mint_RevertIf_ProtocolSharesIsZero | Protocol zero shares | Reverts when protocol returns 0 shares |
 | testFuzz_Deposit_Success | Fuzz deposits | Shares match preview for any valid amount |
 | testFuzz_Mint_Success | Fuzz mints | Assets match preview for any valid amount |
 | testFuzz_Deposit_WithExistingDeposits | Fuzz sequential deposits | Share price stable, accounting correct |
@@ -277,8 +275,6 @@
 | test_HarvestFees_FeeAmountExceedsProfit_CeilingRounding | Aggressive rounding coverage | Safety check prevents fee > profit |
 | test_GetPendingFees_FeeAmountCappedByProfit | getPendingFees cap coverage | View function caps fee at profit |
 | test_GetPendingFees_CeilingRoundingEdgeCase | View function rounding coverage | Pending fees ≤ profit, no revert |
-| test_EdgeCase_DepositAfterMultipleDeposits_ZeroProtocolShares | Multi-deposit zero shares | Reverts with ZeroAmount |
-| test_EdgeCase_MintAfterDeposits_ZeroProtocolShares | Mint zero shares coverage | Reverts with ZeroAmount |
 | testFuzz_HarvestFees_VariousProfitsHighFee | Fuzz harvest 20% fee | Never reverts, treasury receives shares |
 | testFuzz_GetPendingFees_VariousProfits | Fuzz pending fees | Never reverts, pending fees ≤ profit |
 

@@ -70,10 +70,17 @@ contract ERC4626Adapter is EmergencyVault {
     /// @notice Thrown when target vault address is zero in constructor
     error TargetVaultZeroAddress();
 
-    /// @notice Thrown when target vault deposit returns zero shares
+    /// @notice Thrown when target vault deposit returns unexpected shares
     error TargetVaultDepositFailed();
 
+    /// @notice Thrown when target vault withdraw has insufficient liquidity
+    /// @param requested Amount of assets requested
+    /// @param available Amount of assets available
+    error TargetVaultInsufficientLiquidity(uint256 requested, uint256 available);
+
     /// @notice Thrown when target vault asset does not match the underlying asset
+    /// @param asset Address of the underlying asset (USDC, USDT, etc.)
+    /// @param targetVaultAsset Address of the target vault asset
     error TargetVaultAssetMismatch(address asset, address targetVaultAsset);
 
     /* ========== CONSTRUCTOR ========== */
@@ -219,7 +226,7 @@ contract ERC4626Adapter is EmergencyVault {
     function _withdrawFromProtocol(uint256 assets, address receiver) internal override returns (uint256) {
         uint256 availableAssets = TARGET_VAULT.maxWithdraw(address(this));
         if (assets > availableAssets) {
-            revert InsufficientLiquidity(assets, availableAssets);
+            revert TargetVaultInsufficientLiquidity(assets, availableAssets);
         }
 
         uint256 burnedShares = TARGET_VAULT.withdraw(assets, receiver, address(this));
