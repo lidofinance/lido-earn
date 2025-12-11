@@ -401,11 +401,6 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint256 currentTotal = totalAssets();
         uint256 supply = totalSupply();
 
-        if (currentTotal == 0 || supply == 0) {
-            lastTotalAssets = currentTotal;
-            return;
-        }
-
         if (currentTotal > lastTotalAssets) {
             uint256 sharesMinted = _calculateFeeShares(currentTotal, supply);
             if (sharesMinted > 0) {
@@ -417,6 +412,12 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         lastTotalAssets = currentTotal;
     }
 
+    /**
+     * @notice Internal helper to calculate fee amount that would be minted
+     * @dev Simulates fee calculation without state changes
+     * @param currentTotal Current total assets in the vault
+     * @return feeAmount Amount of assets that would be minted as fees
+     */
     function _calculateFeeAmount(uint256 currentTotal) internal view returns (uint256 feeAmount) {
         if (currentTotal <= lastTotalAssets || rewardFee == 0) {
             return 0;
@@ -427,7 +428,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
     /**
      * @notice Internal helper to calculate fee shares that would be minted
-     * @dev Simulates fee calculation without state changes. Used by maxWithdraw and _harvestFees.
+     * @dev Simulates fee calculation without state changes
      * @param currentTotal Current total assets in the vault
      * @param supply Current total supply of vault shares
      * @return feeShares Number of shares that would be minted as fees
