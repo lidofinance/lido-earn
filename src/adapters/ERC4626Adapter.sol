@@ -124,14 +124,8 @@ contract ERC4626Adapter is EmergencyVault {
      * @return targetAssets Total assets managed by the adapter (in target vault + idle balance during emergency)
      */
     function totalAssets() public view override returns (uint256 targetAssets) {
-        uint256 targetShares = TARGET_VAULT.balanceOf(address(this));
-
-        if (targetShares > 0) {
-            targetAssets = TARGET_VAULT.convertToAssets(targetShares);
-        }
-        if (emergencyMode) {
-            targetAssets += ASSET.balanceOf(address(this));
-        }
+        targetAssets = _getProtocolBalance();
+        if (emergencyMode) targetAssets += ASSET.balanceOf(address(this));
     }
 
     /**
