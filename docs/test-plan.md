@@ -1,5 +1,9 @@
 # Test Plan
 
+**Last Updated:** 2025-12-10
+**Total Test Files:** 40
+**Test Coverage:** Unit, Integration, and Invariant tests
+
 ---
 
 ## Environment Overrides
@@ -59,8 +63,6 @@
 | test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with ZeroAmount |
 | test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
 | test_Deposit_RevertIf_Paused | Pause enforcement | Reverts with EnforcedPause |
-| test_FirstDeposit_RevertIf_TooSmall | First deposit minimum | Reverts if deposit < MIN_FIRST_DEPOSIT |
-| test_FirstDeposit_SuccessIf_MinimumMet | First deposit success | MIN_FIRST_DEPOSIT accepted, shares minted |
 | test_SecondDeposit_CanBeSmall | Subsequent deposits | Allows deposits of 1 wei after first |
 | test_Mint_Basic | Basic mint | Exact shares minted, assets match preview |
 | testFuzz_Mint_Basic | Fuzz basic mint | Assets match preview for any valid share amount |
@@ -343,12 +345,11 @@
 | testFuzz_activateRecovery_SnapshotsCorrectly | Recovery snapshot | recoveryAssets and recoverySupply set correctly |
 | testFuzz_activateRecovery_HarvestsFeesBeforeSnapshot | Pre-recovery harvest | Fees harvested before snapshot |
 | testFuzz_activateRecovery_EmitsEvent | Event validation | RecoveryActivated event with correct data |
-| testFuzz_activateRecovery_WorksWithHigherAmount | Amount validation | Reverts if claimed amount > actual balance |
-| testFuzz_activateRecovery_RevertIf_AmountMismatch_TooLow | Amount validation | Reverts if claimed amount < actual balance - 1% |
+| testFuzz_activateRecovery_AllowsDeclaringLowerAmount | Amount validation | Admin can declare lower amount than actual balance without revert |
 | testFuzz_activateRecovery_AllowsPartialRecovery | Partial recovery | Works with partial liquidity (90% recovered) |
 | testFuzz_activateRecovery_RevertIf_AlreadyActive | Recovery idempotency | Reverts with RecoveryAlreadyActive |
 | testFuzz_activateRecovery_RevertIf_EmergencyModeNotActive | State validation | Reverts if emergency mode not active |
-| testFuzz_activateRecovery_RevertIf_ZeroVaultBalance | Balance validation | Reverts with ZeroAmount if no funds recovered |
+| testFuzz_activateRecovery_RevertIf_ZeroVaultBalance | Balance validation | Reverts with ZeroBalance if no funds recovered |
 | testFuzz_activateRecovery_RevertIf_NotEmergencyRole | Authorization check | Reverts without EMERGENCY_ROLE |
 | testFuzz_EmergencyRedeem_ProRataDistribution | Pro-rata redemption | Users receive proportional share of recoveryAssets |
 | testFuzz_EmergencyRedeem_MultipleUsers_FairDistribution | Multi-user fairness | All users receive fair pro-rata distribution |
@@ -360,12 +361,22 @@
 | testFuzz_EmergencyRedeem_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
 | testFuzz_EmergencyRedeem_RevertIf_InsufficientShares | Balance check | Reverts with InsufficientShares |
 | testFuzz_EmergencyRedeem_RevertIf_NoApproval | Approval requirement | Reverts without approval for delegation |
+| testFuzz_EmergencyRedeem_NormalMode | Normal mode operation | Standard redeem() works in normal mode (not emergency/recovery) |
 | testFuzz_EmergencyRedeem_RoundingDoesNotBenefitUser | Rounding direction | Floor rounding favors vault |
+| test_EmergencyRedeem_MinimalShares | Minimal share redemption | Can redeem minimal share amounts (10^OFFSET) |
+| test_EmergencyRedeem_RevertIf_AssetsRoundToZero | Zero assets check | Reverts with ZeroAmount when assets round to 0 |
+| test_HarvestFees_RevertsIf_RecoveryMode | Recovery mode block | harvestFees() reverts with DisabledDuringEmergencyMode in recovery mode |
+| test_HarvestFees_RevertsIf_EmergencyMode | Emergency mode block | harvestFees() reverts with DisabledDuringEmergencyMode before recovery activated |
 | testFuzz_Withdraw_RevertIf_EmergencyMode | Operation blocking | withdraw() reverts in emergency mode |
 | testFuzz_Redeem_RevertIf_EmergencyMode | Operation blocking | redeem() reverts in emergency mode |
 | testFuzz_Deposit_RevertIf_EmergencyMode | Operation blocking | deposit() reverts in emergency mode |
 | testFuzz_Mint_RevertIf_EmergencyMode | Operation blocking | mint() reverts in emergency mode |
 | testFuzz_EmergencyMode_TotalAssets_ReflectsVaultBalance | totalAssets in emergency | totalAssets = vault balance in emergency/recovery |
+| test_activateRecovery_RevertIf_ZeroSupply | Zero supply check | Reverts with ZeroSupply when totalSupply = 0 |
+| testFuzz_activateRecovery_WithPartialRecovery | Partial recovery flow | Multiple emergency withdrawals followed by recovery activation |
+| test_activateRecovery_TracksImplicitLoss_WithSharePriceDecline | Implicit loss tracking | Tracks loss when vault balance < emergencySnapshot (e.g., 50% burn), emits RecoveryActivated with implicitLoss |
+| test_activateRecovery_TracksImplicitLoss_WithPartialWithdrawal | Partial withdrawal loss | Tracks implicit loss with partial recovery, distinguishes stuck funds from actual loss |
+| test_TreasuryRedeem_DuringRecoveryMode | Treasury recovery redemption | Treasury (RewardDistributor) can redeem fee shares via standard redeem() in recovery mode, receives pro-rata assets |
 | test_getProtocolBalance_ReturnsCorrectBalance | Balance query | Returns accurate protocol balance |
 
 ---
@@ -399,8 +410,6 @@
 | test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with ZeroAmount |
 | test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
 | test_Deposit_RevertIf_Paused | Pause enforcement | Reverts when paused |
-| test_FirstDeposit_RevertIf_TooSmall | First deposit minimum | Reverts with FirstDepositTooSmall |
-| testFuzz_FirstDeposit_SuccessIf_MinimumMet | Fuzz valid first deposits | Accepts any amount ≥ MIN_FIRST_DEPOSIT |
 | test_Deposit_RevertIf_ExceedsMaxDeposit | Cap enforcement | Reverts when exceeding target vault capacity |
 
 ---
@@ -545,6 +554,23 @@
 | test_EmergencyWithdraw_MultipleCallsWorkWithRevokedApproval | Multiple emergency withdrawals | Subsequent emergencyWithdraw calls work despite revoked approval (redeem doesn't need approval) |
 | test_EmergencyWithdraw_DepositFailsAfterRevocation | Deposit blocked after emergency | Approval = 0 after emergency withdrawal |
 | test_RefreshProtocolApproval_RestoresAfterEmergencyRevocation | Approval restoration | refreshProtocolApproval() restores approval after emergency revocation |
+
+---
+
+### ERC4626Adapter.DepositUnallocated.t.sol
+
+| Test Name | What It Tests | Key Checks |
+|-----------|---------------|------------|
+| test_DepositUnallocatedAssets_Success | Basic unallocated deposit | MANAGER_ROLE deposits idle USDC to target vault, balance clears, totalAssets increases |
+| test_DepositUnallocatedAssets_RevertWhen_NotManager | Authorization check | Reverts with AccessControlUnauthorizedAccount for non-MANAGER |
+| test_DepositUnallocatedAssets_RevertWhen_EmergencyMode | Emergency mode block | Reverts with DisabledDuringEmergencyMode when emergency active |
+| test_DepositUnallocatedAssets_RevertsIf_ZeroBalance | Zero balance check | Reverts with TargetVaultDepositFailed when no idle balance |
+| test_DepositUnallocatedAssets_MultipleDonations | Sequential deposits | Multiple donations can be deposited incrementally, totalAssets accumulates |
+| test_DepositUnallocatedAssets_AfterDeposit_FeeHarvesting | Fee harvest interaction | Donation deposited as unrealized profit, fees harvested on next operation |
+| test_DepositUnallocatedAssets_DonationTreatedAsUnrealizedProfit | Profit attribution | Donation not immediately treated as profit, included in next harvest, lastTotalAssets unchanged |
+| test_DepositUnallocatedAssets_RespectsTargetVaultCapacity | Target vault cap enforcement | Only deposits up to target vault available capacity, excess remains idle |
+| test_DepositUnallocatedAssets_RevertsWhen_TargetVaultCapacityZero | Zero capacity handling | Reverts with TargetVaultDepositFailed when target vault at capacity |
+| test_DepositUnallocatedAssets_PartialDeposit_CanBeCalledAgainLater | Incremental deposits | Partial deposits work with limited capacity, can be called multiple times as capacity increases |
 
 ---
 

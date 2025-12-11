@@ -44,7 +44,7 @@ Furthermore, to ensure strictly accurate user expectations, the Vault overrides 
 
 However, relying on external protocols for share valuation introduces the critical risk of Read-Only Reentrancy. Since the generic ERC4626Adapter implementation relies directly on the target protocol to report totalAssets via convertToAssets, it inherently trusts the underlying accounting. The adapter itself possesses no internal mechanism to detect if the target pool's state is being manipulated (e.g., via inflated virtual prices during a flash loan callback). Consequently, the mitigation strategy is primarily Operational and Selective: this base adapter is intended only for targets that are themselves atomic and manipulation-resistant (e.g., vanilla lending markets). Integrations with more complex strategies must supply their own adapter subclass that adds the necessary protocol-specific sanity checks.
 
-Additionally, standard ERC4626 vaults are vulnerable to **Inflation Attacks** (or "donation attacks") on the first deposit. To neutralize this without breaking the standard, the `Vault` embeds a **decimals offset** for virtual assets and enforces a **minimum first deposit**. These mechanisms effectively buffer the exchange rate, making price manipulation mathematically infeasible.
+Additionally, standard ERC4626 vaults are vulnerable to **Inflation Attacks** (or "donation attacks") on the first deposit. To neutralize this without breaking the standard, the `Vault` embeds a **decimals offset** for virtual assets. These mechanism effectively buffer the exchange rate, making price manipulation mathematically infeasible.
 
 ### Economic Integrity and Fee Logic
 
@@ -149,7 +149,6 @@ assets = (shares * (totalAssets + 1)) / (totalSupply + 10^OFFSET)
 * The `+ 1` on `totalAssets` provides an additional rounding buffer.
 * The `+ 10^OFFSET` on `totalSupply` creates virtual shares, ensuring the exchange rate cannot be manipulated through small donations.
 * **Rounding:** Conversions use `Math.Rounding.Floor` by default (rounds down), protecting the vault from giving away more than it should.
-* **First Deposit Protection:** Combined with `MIN_FIRST_DEPOSIT` (1,000 wei), this makes inflation attacks prohibitively expensive.
 * The formulas are implemented in `_convertToShares()` and `_convertToAssets()` internal functions.
 
 **Example with OFFSET=6 (typical for USDC):**
@@ -168,7 +167,6 @@ function mint(uint256 sharesToMint, address shareReceiver) public override retur
 
 **Constraints:**
 
-  * **Minimum Deposit:** The first deposit (when `totalSupply == 0`) must exceed `MIN_FIRST_DEPOSIT` (1,000 wei), otherwise it reverts with `FirstDepositTooSmall`.
   * Reverts if the vault is paused.
   * Reverts if `assets` or `shares` are zero.
 
