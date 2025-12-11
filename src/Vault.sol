@@ -600,7 +600,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint256 feeShares = _calculateFeeShares(currentTotal, supply);
         uint256 adjustedSupply = supply + feeShares;
 
-        shares = assets.mulDiv(adjustedSupply + 10 ** OFFSET, currentTotal + 1, Math.Rounding.Floor);
+        shares = assets.mulDiv(adjustedSupply + 10 ** _decimalsOffset(), currentTotal + 1, Math.Rounding.Floor);
     }
 
     /**
@@ -622,7 +622,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint256 feeShares = _calculateFeeShares(currentTotal, supply);
         uint256 adjustedSupply = supply + feeShares;
 
-        assets = shares.mulDiv(currentTotal + 1, adjustedSupply + 10 ** OFFSET, Math.Rounding.Ceil);
+        assets = shares.mulDiv(currentTotal + 1, adjustedSupply + 10 ** _decimalsOffset(), Math.Rounding.Ceil);
     }
 
     /**
@@ -644,7 +644,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint256 feeShares = _calculateFeeShares(currentTotal, supply);
         uint256 adjustedSupply = supply + feeShares;
 
-        assets = shares.mulDiv(currentTotal + 1, adjustedSupply + 10 ** OFFSET, Math.Rounding.Floor);
+        assets = shares.mulDiv(currentTotal + 1, adjustedSupply + 10 ** _decimalsOffset(), Math.Rounding.Floor);
     }
 
     /**
@@ -666,7 +666,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         uint256 feeShares = _calculateFeeShares(currentTotal, supply);
         uint256 adjustedSupply = supply + feeShares;
 
-        shares = assets.mulDiv(adjustedSupply + 10 ** OFFSET, currentTotal + 1, Math.Rounding.Ceil);
+        shares = assets.mulDiv(adjustedSupply + 10 ** _decimalsOffset(), currentTotal + 1, Math.Rounding.Ceil);
     }
 
     /**
