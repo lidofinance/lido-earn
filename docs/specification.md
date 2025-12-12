@@ -277,7 +277,7 @@ function maxWithdraw(address owner) public view virtual override returns (uint25
 
 **Notes:**
 
-  * Uses the inverse of the `_convertToShares` formula: `shares * (total + 1) / (supply + 10^offset)` (rounded down).
+  * Uses the inverse of `_convertToShares`, but subtracts expected fee dilution by adding `feeShares` to the supply before applying the formula.
   * Subtracts 1 wei buffer from the result for additional safety.
   * Ensures that calling `withdraw` with this amount will never revert due to insufficient shares.
 
@@ -317,8 +317,8 @@ function previewWithdraw(uint256 assets) public view virtual override returns (u
 
   * Simulates fee calculation: calculates `feeShares` based on current profit and adds them to `totalSupply`.
   * Performs the conversion using the adjusted supply to provide accurate execution values.
-  * `previewRedeem`: Uses floor rounding (returns "no less than" the exact assets for redemptions).
-  * `previewWithdraw`: Uses ceiling rounding (returns "no more than" the exact shares needed for withdrawals).
+  * `previewRedeem`: Uses floor rounding (returns "no more than" the exact assets for redemptions).
+  * `previewWithdraw`: Uses ceiling rounding (returns "no less than" the exact shares needed for withdrawals).
   * Overridden in `EmergencyVault` to handle recovery mode and emergency restrictions.
 
 #### `getPendingFees`
@@ -389,7 +389,7 @@ function setRewardFee(uint16 newFee) external onlyRole(MANAGER_ROLE)
 
   * Triggers `_harvestFees()` *before* updating the fee.
   * Ensures fees accrued under the old rate are realized immediately, so the new rate applies only to future performance.
-  * Emits `RewardFeeUpdated(uint16 oldFee, uint16 newFee)` event.
+  * Emits `RewardFeeUpdated(uint256 oldFee, uint256 newFee)` event.
 
 #### `setTreasury`
 
@@ -554,8 +554,27 @@ function activateRecovery() external virtual onlyRole(EMERGENCY_ROLE) nonReentra
   * Calculates `implicitLoss = max(0, emergencyTotalAssets - recoveryBalance)`, showing the total amount unavailable to users.
   * `implicitLoss` includes both stuck funds (`remainingProtocolBalance`) and phantom value (if target vault had accounting errors).
   * Emits `RecoveryActivated(recoveryBalance, totalSupply, remainingProtocolBalance, implicitLoss)` for full transparency.
-  * Sets `recoveryMode = true`, permanently disabling deposits and mints.
+  * Sets `recoveryMode = true`, formalizing the one-way transition (deposits/mints were already disabled when `emergencyMode` was engaged).
   * After activation, users can only `redeem()` their shares for pro-rata assets.
+
+#### `redeem`
+
+Overrides the base `Vault.redeem` flow to route withdrawals through the emergency machinery.
+
+```solidity
+function redeem(uint256 sharesToRedeem, address assetReceiver, address shareOwner) public override returns (uint256)
+```
+
+**Behavior:**
+
+  * **Recovery Mode:** Delegates to `_emergencyRedeem`, burning shares and sending pro-rata assets.
+  * **Emergency Mode (pre-recovery):** Reverts with `DisabledDuringEmergencyMode` to preserve pro-rata fairness until recovery begins.
+  * **Normal Mode:** Falls back to the base `Vault.redeem`.
+
+**Notes:**
+
+  * Inherits the standard ERC4626 constraints (non-zero `shares`, `assetReceiver`, sufficient balance/allowance).
+  * `_emergencyRedeem` runs under `nonReentrant` to guard the payout in recovery mode.
 
 #### `_emergencyRedeem`
 
@@ -571,7 +590,6 @@ function _emergencyRedeem(uint256 shares, address receiver, address owner) inter
 
 **Constraints:**
 
-  * Reverts if `recoveryMode` is not active.
   * Reverts if `shares` exceeds the owner's balance.
 
 **Notes:**
@@ -709,6 +727,7 @@ constructor(
 **Constraints:**
 
   * `targetVault_` must not be the zero address.
+  * The target vault’s `asset()` must equal `asset_` (reverts with `TargetVaultAssetMismatch` if mismatched).
 
 **Notes:**
 
@@ -794,9 +813,8 @@ function maxWithdraw(address owner) public view override returns (uint256)
 
 **Returns:**
 
-  * Standard operation: Minimum of user assets and target liquidity.
-  * Recovery Mode: Returns full user assets balance.
-  * Emergency Mode: returns 0.
+  * Standard operation (pre-emergency): Minimum of user assets and target liquidity.
+  * Emergency or Recovery Mode: returns 0 (withdrawals are fully disabled while emergency flows are active).
 
 **Notes:**
 
@@ -827,12 +845,8 @@ function depositUnallocatedAssets() external onlyRole(MANAGER_ROLE)
 Deposits assets into the target vault.
 
 ```solidity
-function _depositToProtocol(uint256 assets) internal override returns (uint256 shares)
+function _depositToProtocol(uint256 assets) internal override
 ```
-
-**Returns:**
-
-  * `shares`: The amount of shares received from the target vault.
 
 **Constraints:**
 
@@ -847,12 +861,8 @@ function _depositToProtocol(uint256 assets) internal override returns (uint256 s
 Withdraws assets from the target vault.
 
 ```solidity
-function _withdrawFromProtocol(uint256 assets, address receiver) internal override returns (uint256)
+function _withdrawFromProtocol(uint256 assets, address receiver) internal override
 ```
-
-**Returns:**
-
-  * The actual amount of assets withdrawn.
 
 **Constraints:**
 
@@ -963,11 +973,12 @@ function redeem(address vault) external onlyRole(MANAGER_ROLE) returns (uint256 
 
 **Constraints:**
 
-  * Reverts if `maxRedeem(address(this))` returns zero (either because the distributor has no shares or the vault temporarily refuses redemptions due to pause/liquidity limits).
+  * Reverts with `NoShares()` if `maxRedeem(address(this))` returns zero, whether due to the distributor having no shares or the vault temporarily refusing redemptions (e.g., pause/liquidity limits).
 
 **Notes:**
 
   * Attempts to redeem as many shares as the vault currently allows via `maxRedeem(address(this))`. If the vault is paused or liquidity‑capped, the distributor may only recover a partial amount and should call again once capacity frees up.
+  * Emits `VaultRedeemed(vault, shares, assets)` after a successful redemption for transparency.
 
 #### `distribute`
 
@@ -990,7 +1001,7 @@ function distribute(address token) external onlyRole(MANAGER_ROLE)
   * **Dust Handling:** Due to integer division rounding, small amounts (< number of recipients) may remain in the contract. This is expected behavior and can be distributed in future calls.
   * Transfers the calculated amount to each recipient using `SafeERC20`.
   * Emits `RecipientPaid(recipient, token, amount)` for each successful transfer.
-  * Emits `RewardsDistributed(token, balance)` with the starting balance; any dust left from integer division remains in the contract for the next distribution.
+  * Emits `RewardsDistributed(token, totalAmountDistributed)` with the aggregate amount sent during the call; any dust left from integer division remains in the contract for the next distribution.
 
 #### `replaceRecipient`
 
@@ -1011,6 +1022,7 @@ function replaceRecipient(uint256 index, address newAccount) external onlyRole(R
 
   * Updates the address in the `recipients` array but preserves the original `basisPoints`.
   * Enables operational key rotation (e.g., wallet compromise) without redeploying the contract.
+  * Emits `RecipientReplaced(index, oldAccount, newAccount)` when the change is applied.
 
 #### `getRecipientsCount` / `getRecipient` / `getAllRecipients`
 
