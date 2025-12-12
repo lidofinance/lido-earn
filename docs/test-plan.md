@@ -1,7 +1,7 @@
 # Test Plan
 
-**Last Updated:** 2025-12-10
-**Total Test Files:** 40
+**Last Updated:** 2025-12-12
+**Total Test Files:** 33
 **Test Coverage:** Unit, Integration, and Invariant tests
 
 ---
@@ -26,15 +26,15 @@
 | test_Constructor_WithMaxOffset | Max offset accepted | OFFSET = 23, creation succeeds |
 | test_Constructor_WithZeroRewardFee | Zero fee accepted | rewardFee = 0, creation succeeds |
 | test_Constructor_WithMaxRewardFee | Max fee accepted | rewardFee = 2000 (20%), creation succeeds |
-| test_Constructor_RevertWhen_AssetIsZeroAddress | Zero asset validation | Reverts with ZeroAddress |
-| test_Constructor_RevertWhen_TreasuryIsZeroAddress | Zero treasury validation | Reverts with ZeroAddress |
-| test_Constructor_RevertWhen_OffsetTooHigh | Offset bounds check | Reverts with OffsetTooHigh for offset > 23 |
-| test_Constructor_RevertWhen_RewardFeeExceedsMax | Fee bounds check | Reverts with InvalidFee for fee > 2000 |
+| test_Constructor_RevertWhen_AssetIsZeroAddress | Zero asset validation | Reverts with InvalidAssetAddress |
+| test_Constructor_RevertWhen_TreasuryIsZeroAddress | Zero treasury validation | Reverts with InvalidTreasuryAddress |
+| test_Constructor_RevertWhen_OffsetTooHigh | Offset bounds check | Reverts with InvalidOffset for offset > 23 |
+| test_Constructor_RevertWhen_RewardFeeExceedsMax | Fee bounds check | Reverts with InvalidRewardFee for fee > 2000 |
 | testFuzz_Constructor_ValidRewardFee | Fuzz valid fees 0-2000 | All valid fees accepted |
 | testFuzz_Constructor_ValidOffset | Fuzz valid offsets 0-23 | All valid offsets accepted |
 | testFuzz_Constructor_InvalidRewardFee | Fuzz invalid fees >2000 | All invalid fees rejected |
 | testFuzz_Constructor_InvalidOffset | Fuzz invalid offsets >23 | All invalid offsets rejected |
-| test_AdapterConstructor_RevertWhen_TargetVaultIsZeroAddress | Target vault validation | Reverts with TargetVaultZeroAddress |
+| test_AdapterConstructor_RevertWhen_TargetVaultIsZeroAddress | Target vault validation | Reverts with InvalidTargetVaultAddress |
 
 ---
 
@@ -60,14 +60,14 @@
 | test_Deposit_EmitsEvent | Event emission | Deposited event with correct params |
 | test_Deposit_MultipleUsers | Multi-user deposits | Each user gets correct shares, totals updated |
 | testFuzz_Deposit_MultipleUsers | Fuzz multi-user deposits | Two users get correct shares for any valid amounts |
-| test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with ZeroAmount |
-| test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
+| test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with InvalidAssetsAmount |
+| test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with InvalidReceiverAddress |
 | test_Deposit_RevertIf_Paused | Pause enforcement | Reverts with EnforcedPause |
 | test_SecondDeposit_CanBeSmall | Subsequent deposits | Allows deposits of 1 wei after first |
 | test_Mint_Basic | Basic mint | Exact shares minted, assets match preview |
 | testFuzz_Mint_Basic | Fuzz basic mint | Assets match preview for any valid share amount |
-| test_Mint_RevertIf_ZeroShares | Zero shares validation | Reverts with ZeroAmount |
-| test_Mint_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
+| test_Mint_RevertIf_ZeroShares | Zero shares validation | Reverts with InvalidSharesAmount |
+| test_Mint_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with InvalidReceiverAddress |
 | test_Mint_RevertIf_FirstDepositTooSmall | First mint minimum | Reverts if assets < MIN_FIRST_DEPOSIT |
 | test_Mint_RevertIf_Paused | Pause enforcement | Reverts with EnforcedPause |
 | test_PreviewDeposit_Accurate | Preview accuracy | Previewed shares = actual shares |
@@ -86,8 +86,8 @@
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
 | test_Withdraw_Basic | Basic withdrawal | Shares burned match preview, assets received |
-| test_Withdraw_RevertIf_ZeroAmount | Zero amount validation | Reverts with ZeroAmount |
-| test_Withdraw_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
+| test_Withdraw_RevertIf_ZeroAmount | Zero amount validation | Reverts with InvalidAssetsAmount |
+| test_Withdraw_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with InvalidReceiverAddress |
 | test_Withdraw_DoesNotBurnAllShares | Partial withdrawal | Remaining shares intact (~90% remain) |
 | test_Withdraw_EmitsEvent | Event emission | Withdrawn event with correct params |
 | test_Withdraw_RevertIf_InsufficientShares | Balance check | Reverts with InsufficientShares |
@@ -102,8 +102,8 @@
 | test_Redeem_Basic | Basic redemption | Assets match preview, shares burned |
 | test_Redeem_AllShares | Full redemption | All shares burned, balance restored |
 | test_Redeem_UpdatesLastTotalAssets | State update | lastTotalAssets updated |
-| test_Redeem_RevertIf_ZeroShares | Zero shares validation | Reverts with ZeroAmount |
-| test_Redeem_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
+| test_Redeem_RevertIf_ZeroShares | Zero shares validation | Reverts with InvalidSharesAmount |
+| test_Redeem_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with InvalidReceiverAddress |
 | test_Redeem_RevertIf_NoApproval | Approval requirement | Reverts with ERC20InsufficientAllowance |
 | test_Redeem_DelegatedWithApproval | Delegated redemption | Works with approval, allowance consumed |
 | test_Redeem_WorksWhenPaused | Pause behavior | Redemption succeeds despite pause |
@@ -205,7 +205,8 @@
 | test_SetRewardFee_Basic | Basic fee update | rewardFee updated, RewardFeeUpdated event |
 | test_SetRewardFee_ToZero | Zero fee | Accepts 0%, event emitted |
 | test_SetRewardFee_ToMaximum | Max fee | Accepts MAX_REWARD_FEE (20%), event emitted |
-| test_SetRewardFee_RevertIf_ExceedsMaximum | Fee bounds | Reverts with InvalidFee |
+| test_SetRewardFee_RevertIf_ExceedsMaximum | Fee bounds | Reverts with InvalidRewardFee |
+| test_SetRewardFee_RevertIf_SameValue | Same value check | Reverts with InvalidRewardFee if setting same value |
 | test_SetRewardFee_RevertIf_NotFeeManager | Fee manager authorization | Reverts with AccessControlUnauthorizedAccount |
 | test_SetRewardFee_HarvestsFeesBeforeChange | Pre-change harvest | Pending fees harvested at old rate |
 | test_SetRewardFee_UpdatesLastTotalAssets | State update | lastTotalAssets = totalAssets after update |
@@ -213,7 +214,7 @@
 | test_SetRewardFee_MultipleChanges | Sequential changes | Each change succeeds, events emitted |
 | testFuzz_SetRewardFee_WithinBounds | Fuzz valid fees | Any value 0-MAX_REWARD_FEE accepted |
 | test_SetTreasury_Basic | Treasury update | MANAGER_ROLE can update treasury, event emitted |
-| test_SetTreasury_RevertIf_ZeroAddress | Input validation | Reverts with ZeroAddress for zero treasury |
+| test_SetTreasury_RevertIf_ZeroAddress | Input validation | Reverts with InvalidTreasuryAddress for zero treasury |
 | test_SetTreasury_RevertIf_SameAddress | No-op prevention | Reverts with InvalidTreasuryAddress if address is unchanged |
 | test_SetTreasury_RevertIf_NotFeeManager | Access control | Only MANAGER_ROLE can update treasury |
 | test_SetTreasury_HarvestsFeesBeforeUpdate | Treasury migration | Fees harvested to old treasury before address update |
@@ -245,11 +246,23 @@
 | test_RecoverERC20_EmitsEvent | Event emission | TokenRecovered event with correct params |
 | testFuzz_RecoverERC20_AnyAmount | Fuzz recovery amounts | Works for any valid token amount |
 | test_RecoverERC20_RevertIf_NotManager | Authorization check | Reverts with AccessControlUnauthorizedAccount |
-| test_RecoverERC20_RevertIf_VaultAsset | Asset protection | Reverts with CannotRecoverVaultAsset when trying to recover main asset |
-| test_RecoverERC20_RevertIf_ZeroToken | Zero token validation | Reverts with ZeroAddress for token |
-| test_RecoverERC20_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress for receiver |
-| test_RecoverERC20_RevertIf_NoBalance | Empty balance | Transfers 0 tokens if balance is 0 (no revert) |
+| test_RecoverERC20_RevertsWhenTokenIsVaultAsset | Asset protection | Reverts with InvalidRecoveryTokenAddress when trying to recover main asset |
+| test_RecoverERC20_RevertsWhenTokenIsZeroAddress | Zero token validation | Reverts with InvalidRecoveryTokenAddress for zero token |
+| test_RecoverERC20_RevertsWhenReceiverIsZeroAddress | Zero receiver validation | Reverts with InvalidRecoveryReceiverAddress for zero receiver |
+| test_RecoverERC20_RevertsWhenBalanceIsZero | Empty balance | Reverts with InsufficientRecoveryTokenBalance when balance is 0 |
 | test_RecoverERC20_WorksAfterDeposits | Recovery with active vault | Recovery works even when vault has user deposits |
+| test_RecoverERC20_SucceedsWhenCallerHasManagerRole | Role-based recovery | Manager role holder can recover tokens |
+| test_RecoverERC20_WithDifferentDecimals | Different token decimals | Works with tokens of different decimal precision |
+| testFuzz_RecoverERC20_MultipleRecoveries | Fuzz multiple recoveries | Multiple recovery operations work correctly |
+
+---
+
+### Vault.RedeemZero.t.sol
+
+| Test Name | What It Tests | Key Checks |
+|-----------|---------------|------------|
+| test_Redeem_Success_WhenAssetsEqualOneWei | Minimal redemption | Successfully redeems when assets equal 1 wei |
+| testFuzz_Redeem_Revert_DustShares | Dust share redemption | Reverts with InvalidAssetsAmount when redeeming dust shares that round to 0 assets |
 
 ---
 
@@ -266,9 +279,9 @@
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
-| test_Deposit_RevertIf_ProtocolSharesIsZero | Protocol zero shares coverage | Reverts with ZeroAmount when protocol returns 0 |
+| test_Deposit_RevertIf_ProtocolSharesIsZero | Protocol zero shares coverage | Reverts with InvalidSharesAmount when protocol returns 0 |
 | test_Deposit_EdgeCase_SharesMintedZero_ExtremeRounding | sharesMinted == 0 coverage | Attempts extreme rounding, may be unreachable |
-| test_Mint_RevertIf_ProtocolSharesIsZero | Protocol zero shares coverage | Reverts with ZeroAmount when protocol returns 0 |
+| test_Mint_RevertIf_ProtocolSharesIsZero | Protocol zero shares coverage | Reverts with InvalidSharesAmount when protocol returns 0 |
 | test_Mint_EdgeCase_AssetsRequiredZero_ExtremeRounding | assetsRequired == 0 coverage | May be mathematically unreachable |
 | test_Withdraw_EdgeCase_SharesBurnedZero_ExtremeRounding | sharesBurned == 0 coverage | May be mathematically unreachable |
 | test_HarvestFees_FeeAmountCappedByProfit | feeAmount > profit coverage | Fee correctly capped with ceiling rounding |
@@ -340,12 +353,12 @@
 | testFuzz_EmergencyWithdraw_SecondCallDoesNotPauseAgain | Pause idempotency | Subsequent calls don't re-pause |
 | testFuzz_activateRecovery_SnapshotsCorrectly | Recovery snapshot | recoveryAssets and recoverySupply set correctly |
 | testFuzz_activateRecovery_HarvestsFeesBeforeSnapshot | Pre-recovery harvest | Fees harvested before snapshot |
-| testFuzz_activateRecovery_EmitsEvent | Event validation | RecoveryActivated event with correct data |
+| testFuzz_activateRecovery_EmitsEvent | Event validation | RecoveryModeActivated event with correct data |
 | testFuzz_activateRecovery_AllowsDeclaringLowerAmount | Amount validation | Admin can declare lower amount than actual balance without revert |
 | testFuzz_activateRecovery_AllowsPartialRecovery | Partial recovery | Works with partial liquidity (90% recovered) |
-| testFuzz_activateRecovery_RevertIf_AlreadyActive | Recovery idempotency | Reverts with RecoveryAlreadyActive |
+| testFuzz_activateRecovery_RevertIf_AlreadyActive | Recovery idempotency | Reverts with RecoveryModeAlreadyActive |
 | testFuzz_activateRecovery_RevertIf_EmergencyModeNotActive | State validation | Reverts if emergency mode not active |
-| testFuzz_activateRecovery_RevertIf_ZeroVaultBalance | Balance validation | Reverts with ZeroBalance if no funds recovered |
+| testFuzz_activateRecovery_RevertIf_ZeroVaultBalance | Balance validation | Reverts with InvalidRecoveryAssets if no funds recovered |
 | testFuzz_activateRecovery_RevertIf_NotEmergencyRole | Authorization check | Reverts without EMERGENCY_ROLE |
 | testFuzz_EmergencyRedeem_ProRataDistribution | Pro-rata redemption | Users receive proportional share of recoveryAssets |
 | testFuzz_EmergencyRedeem_MultipleUsers_FairDistribution | Multi-user fairness | All users receive fair pro-rata distribution |
@@ -353,14 +366,14 @@
 | testFuzz_EmergencyRedeem_PartialRedeem | Partial redemption | Users can redeem portion of shares |
 | testFuzz_EmergencyRedeem_BurnsSharesCorrectly | Share burning | Shares burned, totalSupply decreased |
 | testFuzz_EmergencyRedeem_WithApproval | Delegated redemption | Works with approval mechanism |
-| testFuzz_EmergencyRedeem_RevertIf_ZeroShares | Zero shares validation | Reverts with ZeroAmount |
-| testFuzz_EmergencyRedeem_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
+| testFuzz_EmergencyRedeem_RevertIf_ZeroShares | Zero shares validation | Reverts with InvalidSharesAmount |
+| testFuzz_EmergencyRedeem_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with InvalidReceiverAddress |
 | testFuzz_EmergencyRedeem_RevertIf_InsufficientShares | Balance check | Reverts with InsufficientShares |
 | testFuzz_EmergencyRedeem_RevertIf_NoApproval | Approval requirement | Reverts without approval for delegation |
 | testFuzz_EmergencyRedeem_NormalMode | Normal mode operation | Standard redeem() works in normal mode (not emergency/recovery) |
 | testFuzz_EmergencyRedeem_RoundingDoesNotBenefitUser | Rounding direction | Floor rounding favors vault |
 | test_EmergencyRedeem_MinimalShares | Minimal share redemption | Can redeem minimal share amounts (10^OFFSET) |
-| test_EmergencyRedeem_RevertIf_AssetsRoundToZero | Zero assets check | Reverts with ZeroAmount when assets round to 0 |
+| test_EmergencyRedeem_RevertIf_AssetsRoundToZero | Zero assets check | Reverts with InvalidAssetsAmount when assets round to 0 |
 | test_HarvestFees_RevertsIf_RecoveryMode | Recovery mode block | harvestFees() reverts with DisabledDuringEmergencyMode in recovery mode |
 | test_HarvestFees_RevertsIf_EmergencyMode | Emergency mode block | harvestFees() reverts with DisabledDuringEmergencyMode before recovery activated |
 | testFuzz_Withdraw_RevertIf_EmergencyMode | Operation blocking | withdraw() reverts in emergency mode |
@@ -368,9 +381,9 @@
 | testFuzz_Deposit_RevertIf_EmergencyMode | Operation blocking | deposit() reverts in emergency mode |
 | testFuzz_Mint_RevertIf_EmergencyMode | Operation blocking | mint() reverts in emergency mode |
 | testFuzz_EmergencyMode_TotalAssets_ReflectsVaultBalance | totalAssets in emergency | totalAssets = vault balance in emergency/recovery |
-| test_activateRecovery_RevertIf_ZeroSupply | Zero supply check | Reverts with ZeroSupply when totalSupply = 0 |
+| test_activateRecovery_RevertIf_ZeroSupply | Zero supply check | Reverts with InvalidRecoverySupply when totalSupply = 0 |
 | testFuzz_activateRecovery_WithPartialRecovery | Partial recovery flow | Multiple emergency withdrawals followed by recovery activation |
-| test_activateRecovery_TracksImplicitLoss_WithSharePriceDecline | Implicit loss tracking | Tracks loss when vault balance < emergencySnapshot (e.g., 50% burn), emits RecoveryActivated with implicitLoss |
+| test_activateRecovery_TracksImplicitLoss_WithSharePriceDecline | Implicit loss tracking | Tracks loss when vault balance < emergencySnapshot (e.g., 50% burn), emits RecoveryModeActivated with implicitLoss |
 | test_activateRecovery_TracksImplicitLoss_WithPartialWithdrawal | Partial withdrawal loss | Tracks implicit loss with partial recovery, distinguishes stuck funds from actual loss |
 | test_TreasuryRedeem_DuringRecoveryMode | Treasury recovery redemption | Treasury (RewardDistributor) can redeem fee shares via standard redeem() in recovery mode, receives pro-rata assets |
 | test_getProtocolBalance_ReturnsCorrectBalance | Balance query | Returns accurate protocol balance |
@@ -410,8 +423,8 @@
 | testFuzz_Deposit_MultipleUsers | Multi-user deposits | Each user receives correct shares, totals correct |
 | testFuzz_Deposit_UpdatesTargetVaultBalance | Target vault position update | Target shares increase by deposit * 10^OFFSET |
 | test_Deposit_RevertIf_TargetVaultReturnsZeroShares | Target vault zero shares | Reverts with TargetVaultDepositFailed |
-| test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with ZeroAmount |
-| test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with ZeroAddress |
+| test_Deposit_RevertIf_ZeroAmount | Zero amount validation | Reverts with InvalidAssetsAmount |
+| test_Deposit_RevertIf_ZeroReceiver | Zero receiver validation | Reverts with InvalidReceiverAddress |
 | test_Deposit_RevertIf_Paused | Pause enforcement | Reverts when paused |
 | test_Deposit_RevertIf_ExceedsMaxDeposit | Cap enforcement | Reverts when exceeding target vault capacity |
 
@@ -441,7 +454,8 @@
 | test_SetRewardFee_Basic | Fee update | Fee updates, event emitted |
 | test_SetRewardFee_ToZero | Zero fee | Accepts 0% |
 | test_SetRewardFee_ToMaximum | Max fee | Accepts 20% |
-| test_SetRewardFee_RevertIf_ExceedsMaximum | Fee bounds | Reverts with InvalidFee |
+| test_SetRewardFee_RevertIf_ExceedsMaximum | Fee bounds | Reverts with InvalidRewardFee |
+| test_SetRewardFee_RevertIf_SameValue | Same value check | Reverts with InvalidRewardFee if setting same value |
 | test_SetRewardFee_RevertIf_NotFeeManager | Authorization | Reverts with access control error |
 | test_SetRewardFee_HarvestsFeesBeforeChange | Pre-change harvest | Treasury receives shares at old rate |
 | test_SetRewardFee_UpdatesLastTotalAssets | State update | lastTotalAssets = totalAssets after update |
@@ -577,38 +591,46 @@
 
 ---
 
+### ERC4626Adapter.Recover.t.sol
+
+| Test Name | What It Tests | Key Checks |
+|-----------|---------------|------------|
+| test_RecoverERC20_RevertsWhenTokenIsTargetVaultShares | Target vault share protection | Reverts with InvalidRecoveryTokenAddress when trying to recover target vault shares |
+
+---
+
 ## RewardDistributor Tests
 
 ### RewardDistributor.t.sol
 
 | Test Name | What It Tests | Key Checks |
 |-----------|---------------|------------|
+| test_Constructor_RevertIf_AdminZeroAddress | Zero admin validation | Reverts with InvalidAdminAddress for zero admin |
 | test_Constructor_RevertIf_LengthMismatch | Array length validation | Reverts with InvalidRecipientsLength |
 | test_Constructor_RevertIf_ZeroRecipients | Empty array validation | Reverts with InvalidRecipientsLength |
-| test_Constructor_RevertIf_ZeroAddress | Zero address validation | Reverts with ZeroAddress |
-| test_Constructor_RevertIf_ZeroBasisPoints | Zero basis points validation | Reverts with ZeroBasisPoints |
+| test_Constructor_RevertIf_RecipientZeroAddress | Zero recipient validation | Reverts with InvalidRecipientAddress |
+| test_Constructor_RevertIf_ZeroBasisPoints | Zero basis points validation | Reverts with InvalidBasisPoints |
+| test_Constructor_RevertIf_InvalidBasisPoints | Invalid basis points validation | Reverts with InvalidBasisPoints |
 | test_Constructor_RevertIf_InvalidBasisPointsSum | Basis points sum validation | Reverts with InvalidBasisPointsSum if ≠ 10000 |
 | test_Constructor_RevertIf_DuplicateRecipients | Duplicate validation | Reverts with DuplicateRecipient |
 | test_Constructor_SetsRecipientsAndManagerRole | Successful construction | Manager has MANAGER_ROLE, recipients stored, getAllRecipients works |
 | testFuzz_Constructor_SucceedsWithValidTwoWaySplit | Fuzz two-way splits | Accepts any split summing to 10000 |
-| test_Distribute_RevertIf_NoBalance | Empty balance check | Reverts with NoBalance |
+| test_ReplaceRecipient_Succeeds | Recipient replacement | Successfully replaces recipient address |
+| test_ReplaceRecipient_RevertIf_NotRecipientsManager | Authorization check | Reverts with AccessControlUnauthorizedAccount |
+| test_ReplaceRecipient_RevertIf_InvalidIndex | Index validation | Reverts with InvalidRecipientIndex |
+| test_ReplaceRecipient_RevertIf_ZeroAddress | Zero address validation | Reverts with InvalidRecipientAddress |
+| test_ReplaceRecipient_RevertIf_DuplicateAddress | Duplicate check | Reverts with DuplicateRecipient |
+| test_ReplaceRecipient_RevertIf_Unchanged | Unchanged check | Reverts with InvalidRecipientAddress if same address |
+| test_ReplaceRecipient_RevertIf_AdminOnly | Role requirement | Reverts when admin tries without RECIPIENTS_MANAGER_ROLE |
+| test_Distribute_RevertIf_NoBalance | Empty balance check | Reverts with InsufficientBalance |
 | test_Distribute_RevertIf_NotManager | Manager authorization | Reverts with AccessControlUnauthorizedAccount |
 | test_Distribute_DistributesAccordingToBps | Proportional distribution | Each recipient receives correct %, events emitted |
 | testFuzz_Distribute_TwoRecipients | Fuzz distribution | Correct for any split/amount, rounding dust remains |
-| test_Redeem_RevertIf_NoShares | Empty shares check | Reverts with NoShares |
+| test_Redeem_RevertIf_NoShares | Empty shares check | Reverts with NoAvailableSharesToRedeem |
 | test_Redeem_RevertIf_NotManager | Manager authorization | Reverts with AccessControlUnauthorizedAccount |
 | test_Redeem_SendsAssetsAndEmitsEvent | Redemption | All shares redeemed, assets transferred, event emitted |
-| testFuzz_Constructor_ThreeWaySplit | Fuzz three-way splits | Accepts any split summing to 10000 |
-| testFuzz_Constructor_FiveWaySplit | Fuzz five-way splits | Handles complex multi-recipient splits |
-| test_Distribute_SingleRecipient | Single recipient | 100% to one recipient works |
-| test_Distribute_HandlesDust | Dust handling | Rounding dust stays in contract |
-| testFuzz_Distribute_MultipleRecipients | Fuzz multi-recipient | Correct distribution for 2-5 recipients |
-| test_GetRecipient_ReturnsCorrectData | Getter function | getRecipient(index) returns correct address and bps |
-| test_GetRecipientsCount_ReturnsCorrectCount | Count function | getRecipientsCount() returns array length |
-| testFuzz_Distribute_WithDifferentTokenDecimals | Fuzz token decimals | Works with 6, 8, 18 decimal tokens |
-| test_Redeem_EmitsCorrectEvent | Event validation | Redeemed event with correct vault and amount |
-| test_Distribute_EmitsMultipleEvents | Multiple events | Distributed event for each recipient |
-| testFuzz_Redeem_ConvertsAllShares | Fuzz redemption amounts | Redeems all distributor shares regardless of amount |
+| test_Redeem_RespectsMaxRedeemLimit | Max redeem enforcement | Respects vault maxRedeem limit when shares exceed capacity |
+| test_Redeem_DistributorAfterEmergencyRecovery | Emergency recovery redemption | Distributor can redeem shares after vault emergency recovery |
 
 ---
 

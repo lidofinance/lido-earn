@@ -41,7 +41,6 @@ contract VaultEdgeCasesTest is TestConfig {
 
     /* ========== DEPOSIT EDGE CASES ========== */
 
-    /// @notice Coverage: Vault.sol line 111 - sharesMinted == 0 in deposit()
     /// @dev This branch is extremely difficult to reach naturally because:
     ///      1. If assetsToDeposit > 0 (already checked)
     ///      2. And totalSupply() > 0 (after first deposit)
@@ -76,16 +75,16 @@ contract VaultEdgeCasesTest is TestConfig {
         vm.startPrank(user1);
         asset.approve(address(vaultMaxOffset), tinyDeposit);
 
-        // This might revert with ZeroAmount OR succeed with 1 share
+        // This might revert with InvalidSharesAmount OR succeed with 1 share
         // The branch may be unreachable with current ERC4626 math
         try vaultMaxOffset.deposit(tinyDeposit, user1) {
             // If it succeeds, the branch is likely unreachable
             assertTrue(true, "Deposit succeeded - branch may be unreachable");
         } catch (bytes memory reason) {
-            // If it reverts with ZeroAmount, we covered the branch
+            // If it reverts with InvalidSharesAmount, we covered the branch
             bytes4 selector = bytes4(reason);
-            if (selector == Vault.ZeroAmount.selector) {
-                assertTrue(true, "ZeroAmount revert - branch covered");
+            if (selector == Vault.InvalidSharesAmount.selector) {
+                assertTrue(true, "InvalidSharesAmount revert - branch covered");
             } else {
                 // Some other revert - branch still not covered
                 revert("Unexpected revert reason");
@@ -96,7 +95,6 @@ contract VaultEdgeCasesTest is TestConfig {
 
     /* ========== MINT EDGE CASES ========== */
 
-    /// @notice Coverage: Vault.sol line 139 - assetsRequired == 0 in mint()
     /// @dev This branch is extremely difficult to reach because:
     ///      1. If sharesToMint > 0 (already checked on line 133)
     ///      2. Then previewMint should return non-zero assets
@@ -125,7 +123,6 @@ contract VaultEdgeCasesTest is TestConfig {
 
     /* ========== WITHDRAW EDGE CASES ========== */
 
-    /// @notice Coverage: Vault.sol line 169 - sharesBurned == 0 in withdraw()
     /// @dev This branch is extremely difficult to reach because:
     ///      1. If assetsToWithdraw > 0 (already checked)
     ///      2. And totalAssets() > 0
@@ -160,8 +157,8 @@ contract VaultEdgeCasesTest is TestConfig {
             assertTrue(true, "Withdraw succeeded - branch may be unreachable");
         } catch (bytes memory reason) {
             bytes4 selector = bytes4(reason);
-            if (selector == Vault.ZeroAmount.selector) {
-                assertTrue(true, "ZeroAmount revert - branch covered");
+            if (selector == Vault.InvalidSharesAmount.selector) {
+                assertTrue(true, "InvalidSharesAmount revert - branch covered");
             } else {
                 // Some other revert is acceptable (e.g., InsufficientShares)
                 assertTrue(true, "Other revert - branch testing complete");
@@ -172,7 +169,6 @@ contract VaultEdgeCasesTest is TestConfig {
 
     /* ========== FEE HARVESTING EDGE CASES ========== */
 
-    /// @notice Coverage: Vault.sol line 256 - feeAmount > profit in _harvestFees()
     /// @dev Tests the overflow protection where calculated fee exceeds profit
     ///      This can occur with rounding in mulDiv with very small profits
     function test_HarvestFees_FeeAmountCappedByProfit() public {
@@ -203,7 +199,6 @@ contract VaultEdgeCasesTest is TestConfig {
         assertTrue(treasuryBalanceAfter >= treasuryBalanceBefore, "Fee harvest completed safely");
     }
 
-    /// @notice Coverage: Vault.sol line 256 - feeAmount > profit in _harvestFees() via ceiling rounding
     /// @dev More aggressive test: force mulDiv ceiling to exceed profit
     function test_HarvestFees_FeeAmountExceedsProfit_CeilingRounding() public {
         // Set fee to exactly trigger ceiling rounding edge case
@@ -232,7 +227,6 @@ contract VaultEdgeCasesTest is TestConfig {
         assertTrue(true, "Fee harvest with ceiling rounding completed safely");
     }
 
-    /// @notice Coverage: Vault.sol line 325 - feeAmount > profit in getPendingFees()
     /// @dev Tests the view function's overflow protection
     function test_GetPendingFees_FeeAmountCappedByProfit() public {
         // Set maximum fee (20%)
@@ -257,7 +251,6 @@ contract VaultEdgeCasesTest is TestConfig {
         assertLe(pendingFees, 1, "Pending fees capped at profit");
     }
 
-    /// @notice Coverage: Vault.sol line 325 - feeAmount > profit with ceiling rounding
     /// @dev More aggressive test for getPendingFees view function
     function test_GetPendingFees_CeilingRoundingEdgeCase() public {
         // Set very small fee

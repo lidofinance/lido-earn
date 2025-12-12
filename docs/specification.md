@@ -98,6 +98,22 @@ Base contract implementing **ERC4626**, **ERC20Permit**, **AccessControl**, **Pa
   * `MANAGER_ROLE`: Can update fee parameters, update treasury address, and recover accidentally sent ERC20 tokens
   * `EMERGENCY_ROLE`: Can trigger emergency withdrawal and manage protocol approvals
 
+**Errors:**
+
+* `InvalidAssetAddress(address assetAddress)`: Thrown when asset address is zero in constructor.
+* `InvalidTreasuryAddress(address treasuryAddress)`: Thrown when treasury address is zero or same as current in constructor/setTreasury.
+* `InvalidAdminAddress(address adminAddress)`: Thrown when admin address is zero in constructor.
+* `InvalidRewardFee(uint256 fee)`: Thrown when reward fee exceeds maximum or same as current value.
+* `InvalidOffset(uint8 offset)`: Thrown when offset exceeds MAX_OFFSET (23).
+* `InvalidAssetsAmount(uint256 assetsAmount, uint256 sharesAmount)`: Thrown when assets amount is zero or invalid.
+* `InvalidSharesAmount(uint256 sharesAmount, uint256 assetsAmount)`: Thrown when shares amount is zero or rounds to zero.
+* `InvalidReceiverAddress(address receiver)`: Thrown when receiver address is zero.
+* `InsufficientShares(uint256 requested, uint256 available)`: Thrown when user has insufficient shares for operation.
+* `ExceedsMaxDeposit(uint256 requested, uint256 maximum)`: Thrown when deposit/mint exceeds maxDeposit cap.
+* `InvalidRecoveryTokenAddress(address token)`: Thrown when trying to recover vault asset or target vault shares.
+* `InvalidRecoveryReceiverAddress(address receiver)`: Thrown when recovery receiver address is zero.
+* `InsufficientRecoveryTokenBalance(address token)`: Thrown when token balance is zero during recovery.
+
 #### `constructor`
 
 Initializes the vault configuration, roles, and immutable parameters.
@@ -382,7 +398,7 @@ function setRewardFee(uint16 newFee) external onlyRole(MANAGER_ROLE)
 **Constraints:**
 
   * `newFee` must not exceed `MAX_REWARD_FEE_BASIS_POINTS` (2,000 basis points / 20%).
-  * `newFee` must be different from the current fee (reverts with `InvalidFee` if the same).
+  * `newFee` must be different from the current fee (reverts with `InvalidRewardFee` if the same).
   * Only callable by addresses with `MANAGER_ROLE`.
 
 **Notes:**
@@ -421,8 +437,8 @@ function recoverERC20(address token, address receiver) external onlyRole(MANAGER
 
   * `token` must not be the zero address.
   * `receiver` must not be the zero address.
-  * `token` must not be the vault's main asset (reverts with `CannotRecoverVaultAsset`).
-  * Token balance in the vault must be greater than zero (reverts with `RecoveryTokenBalanceZero`).
+  * `token` must not be the vault's main asset (reverts with `InvalidRecoveryTokenAddress(address token)`).
+  * Token balance in the vault must be greater than zero (reverts with `InsufficientRecoveryTokenBalance(address token)`).
 
 **Notes:**
 
@@ -471,18 +487,18 @@ Extends `Vault` to handle protocol failure scenarios using a Snapshot-based reco
 
 **Errors:**
 
-* `RecoveryAlreadyActive`: Thrown when trying to activate recovery that's already active.
+* `RecoveryModeAlreadyActive`: Thrown when trying to activate recovery that's already active.
 * `DisabledDuringEmergencyMode`: Thrown when attempting a disabled action while emergency mode is active.
 * `EmergencyModeAlreadyActive`: Thrown when attempting to activate emergency mode more than once.
 * `EmergencyModeNotActive`: Thrown when trying to activate recovery without emergency mode being active.
-* `ZeroBalance`: Thrown when trying to activate recovery with balance being zero.
-* `ZeroSupply`: Thrown when trying to activate recovery with supply being zero.
+* `InvalidRecoveryAssets(uint256 assets)`: Thrown when trying to activate recovery with balance being zero.
+* `InvalidRecoverySupply(uint256 supply)`: Thrown when trying to activate recovery with supply being zero.
 
 **Events:**
 
 * `EmergencyModeActivated(uint256 emergencyAssetsSnapshot, uint256 activationTimestamp)`: Emitted when emergency mode is activated.
 * `EmergencyWithdrawal(uint256 recovered, uint256 remaining)`: Emitted when assets are withdrawn from protocol during emergency.
-* `RecoveryActivated(uint256 recoveryBalance, uint256 recoverySupply, uint256 remainingProtocolBalance, uint256 implicitLoss)`: Emitted when emergency recovery is activated. Parameters:
+* `RecoveryModeActivated(uint256 recoveryBalance, uint256 recoverySupply, uint256 remainingProtocolBalance, uint256 implicitLoss)`: Emitted when emergency recovery is activated. Parameters:
   - `recoveryBalance`: The vault's asset balance that will be distributed to users (snapshotted as `recoveryAssets`)
   - `recoverySupply`: Total supply of shares at recovery activation
   - `remainingProtocolBalance`: Amount of assets still stuck in the target vault (if any)
@@ -553,7 +569,7 @@ function activateRecovery() external virtual onlyRole(EMERGENCY_ROLE) nonReentra
   * Snapshots `recoveryAssets` and `recoverySupply` using the vault's current asset balance and total supply.
   * Calculates `implicitLoss = max(0, emergencyTotalAssets - recoveryBalance)`, showing the total amount unavailable to users.
   * `implicitLoss` includes both stuck funds (`remainingProtocolBalance`) and phantom value (if target vault had accounting errors).
-  * Emits `RecoveryActivated(recoveryBalance, totalSupply, remainingProtocolBalance, implicitLoss)` for full transparency.
+  * Emits `RecoveryModeActivated(recoveryBalance, totalSupply, remainingProtocolBalance, implicitLoss)` for full transparency.
   * Sets `recoveryMode = true`, formalizing the one-way transition (deposits/mints were already disabled when `emergencyMode` was engaged).
   * After activation, users can only `redeem()` their shares for pro-rata assets.
 
@@ -699,8 +715,10 @@ A concrete implementation that adapts the system to a specific target ERC4626 va
 
 **Errors:**
 
-* `TargetVaultZeroAddress`: Thrown when target vault address is zero in constructor.
-* `TargetVaultDepositFailed`: Thrown when target vault deposit returns zero shares.
+* `InvalidTargetVaultAddress(address vault)`: Thrown when target vault address is zero in constructor.
+* `TargetVaultAssetMismatch(address asset, address targetVaultAsset)`: Thrown when target vault asset doesn't match provided asset.
+* `TargetVaultDepositFailed()`: Thrown when target vault deposit returns zero shares.
+* `TargetVaultInsufficientLiquidity(uint256 requested, uint256 available)`: Thrown when requested withdrawal exceeds target vault available liquidity.
 
 **Events:**
 
@@ -901,7 +919,7 @@ function recoverERC20(address token, address receiver) public override onlyRole(
 
 **Constraints:**
 
-  * Reverts with `CannotRecoverTargetVaultShares` if `token == address(TARGET_VAULT)`.
+  * Reverts with `InvalidRecoveryTokenAddress(address token)` if `token == address(TARGET_VAULT)`.
   * Inherits all base `Vault.recoverERC20` constraints (cannot recover main asset, requires non-zero token/receiver, non-zero balance).
 
 **Notes:**
@@ -938,6 +956,18 @@ Manages the splitting of harvested rewards to multiple recipients based on fixed
 * `MANAGER_ROLE`: Can trigger `redeem()` and `distribute()` operations.
 * `RECIPIENTS_MANAGER_ROLE`: Can replace recipient addresses via `replaceRecipient()`.
 
+**Errors:**
+
+* `InvalidAdminAddress(address admin)`: Thrown when admin address is zero in constructor.
+* `InvalidRecipientsLength()`: Thrown when recipients array is empty or length mismatches basis points array.
+* `InvalidRecipientAddress(address recipient)`: Thrown when recipient address is zero or duplicate, or when replacing with same/zero address.
+* `InvalidBasisPoints(address recipient, uint256 basisPoints)`: Thrown when basis points are zero for a recipient.
+* `InvalidBasisPointsSum()`: Thrown when sum of all basis points doesn't equal MAX_BASIS_POINTS (10,000).
+* `DuplicateRecipient(address account)`: Thrown when trying to add or replace with a duplicate recipient address.
+* `InvalidRecipientIndex(uint256 index)`: Thrown when recipient index is out of bounds in replaceRecipient.
+* `InsufficientBalance()`: Thrown when trying to distribute with zero token balance.
+* `NoAvailableSharesToRedeem()`: Thrown when trying to redeem with no shares or vault refuses redemption.
+
 #### `constructor`
 
 Initializes the distributor with fixed allocation weights; recipient addresses can be rotated later via admin role (basis points remain unchanged).
@@ -973,7 +1003,7 @@ function redeem(address vault) external onlyRole(MANAGER_ROLE) returns (uint256 
 
 **Constraints:**
 
-  * Reverts with `NoShares()` if `maxRedeem(address(this))` returns zero, whether due to the distributor having no shares or the vault temporarily refusing redemptions (e.g., pause/liquidity limits).
+  * Reverts with `NoAvailableSharesToRedeem()` if `maxRedeem(address(this))` returns zero, whether due to the distributor having no shares or the vault temporarily refusing redemptions (e.g., pause/liquidity limits).
 
 **Notes:**
 

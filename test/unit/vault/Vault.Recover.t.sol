@@ -62,25 +62,25 @@ contract VaultRecoverTest is VaultTestBase {
         // Send vault's main asset to the vault
         asset.mint(address(vault), 1000e6);
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.CannotRecoverVaultAsset.selector, address(asset)));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRecoveryTokenAddress.selector, address(asset)));
         vault.recoverERC20(address(asset), receiver);
     }
 
     function test_RecoverERC20_RevertsWhenTokenIsZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(Vault.RecoveryTokenZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRecoveryTokenAddress.selector, address(0)));
         vault.recoverERC20(address(0), receiver);
     }
 
     function test_RecoverERC20_RevertsWhenReceiverIsZeroAddress() public {
         otherToken.mint(address(vault), 1000e18);
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.RecoveryReceiverZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRecoveryReceiverAddress.selector, address(0)));
         vault.recoverERC20(address(otherToken), address(0));
     }
 
     function test_RecoverERC20_RevertsWhenBalanceIsZero() public {
         // Don't mint any tokens to vault
-        vm.expectRevert(abi.encodeWithSelector(Vault.RecoveryTokenBalanceZero.selector, address(otherToken)));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InsufficientRecoveryTokenBalance.selector, address(otherToken)));
         vault.recoverERC20(address(otherToken), receiver);
     }
 

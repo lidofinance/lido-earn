@@ -95,7 +95,7 @@ contract VaultDepositTest is VaultTestBase {
     /// @notice Ensures deposit reverts when zero amount.
     /// @dev Verifies the revert protects against zero amount.
     function test_Deposit_RevertIf_ZeroAmount() public {
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidAssetsAmount.selector, 0, 0));
         vm.prank(alice);
         vault.deposit(0, alice);
     }
@@ -103,7 +103,7 @@ contract VaultDepositTest is VaultTestBase {
     /// @notice Ensures deposit reverts when zero receiver.
     /// @dev Verifies the revert protects against zero receiver.
     function test_Deposit_RevertIf_ZeroReceiver() public {
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidReceiverAddress.selector, address(0)));
         vm.prank(alice);
         vault.deposit(10_000e6, address(0));
     }
@@ -166,7 +166,7 @@ contract VaultDepositTest is VaultTestBase {
     /// @notice Ensures mint reverts when zero shares.
     /// @dev Verifies the revert protects against zero shares.
     function test_Mint_RevertIf_ZeroShares() public {
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidSharesAmount.selector, 0, 0));
         vm.prank(alice);
         vault.mint(0, alice);
     }
@@ -174,7 +174,7 @@ contract VaultDepositTest is VaultTestBase {
     /// @notice Ensures mint reverts when zero receiver.
     /// @dev Verifies the revert protects against zero receiver.
     function test_Mint_RevertIf_ZeroReceiver() public {
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidReceiverAddress.selector, address(0)));
         vm.prank(alice);
         vault.mint(10_000e6, address(0));
     }

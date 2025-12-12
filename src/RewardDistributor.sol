@@ -87,6 +87,7 @@ contract RewardDistributor is AccessControl {
     /* ========== ERRORS ========== */
 
     /// @notice Thrown when admin address is invalid
+    /// @param admin Address that failed the admin validation check
     error InvalidAdminAddress(address admin);
 
     /// @notice Thrown when recipients and basisPoints arrays have different lengths or are empty
@@ -96,16 +97,19 @@ contract RewardDistributor is AccessControl {
     error InvalidBasisPointsSum();
 
     /// @notice Thrown when a recipient's address is invalid
+    /// @param recipient Recipient address that failed validation
     error InvalidRecipientAddress(address recipient);
 
     /// @notice Thrown when a recipient's basis points allocation is invalid
+    /// @param recipient Recipient address tied to the invalid allocation
+    /// @param basisPoints Basis points value that violated constraints
     error InvalidBasisPoints(address recipient, uint256 basisPoints);
 
     /// @notice Thrown when attempting to distribute with zero token balance
-    error NoBalance();
+    error InsufficientBalance();
 
-    /// @notice Thrown when attempting to redeem with zero vault shares
-    error NoShares();
+    /// @notice Thrown when attempting to redeem with no shares or zero liquidity in the vault
+    error NoAvailableSharesToRedeem();
 
     /**
      * @notice Thrown when the same address appears multiple times in recipients array
@@ -114,10 +118,8 @@ contract RewardDistributor is AccessControl {
     error DuplicateRecipient(address account);
 
     /// @notice Thrown when attempting to access or replace recipient using invalid index
+    /// @param index Index value that is out of bounds
     error InvalidRecipientIndex(uint256 index);
-
-    /// @notice Thrown when attempting to replace a recipient with the same address
-    error RecipientUnchanged();
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -182,9 +184,7 @@ contract RewardDistributor is AccessControl {
         IERC4626 vaultContract = IERC4626(vault);
         uint256 shares = vaultContract.maxRedeem(address(this));
 
-        if (shares == 0) {
-            revert NoShares();
-        }
+        if (shares == 0) revert NoAvailableSharesToRedeem();
 
         assets = vaultContract.redeem(shares, address(this), address(this));
         emit VaultRedeemed(vault, shares, assets);
@@ -203,7 +203,7 @@ contract RewardDistributor is AccessControl {
         Recipient storage recipient = recipients[index];
         address oldAccount = recipient.account;
 
-        if (newAccount == oldAccount) revert RecipientUnchanged();
+        if (newAccount == oldAccount) revert InvalidRecipientAddress(newAccount);
         if (recipientExists[newAccount]) revert DuplicateRecipient(newAccount);
 
         recipientExists[oldAccount] = false;
@@ -223,9 +223,7 @@ contract RewardDistributor is AccessControl {
         IERC20 tokenContract = IERC20(token);
         uint256 balance = tokenContract.balanceOf(address(this));
 
-        if (balance == 0) {
-            revert NoBalance();
-        }
+        if (balance == 0) revert InsufficientBalance();
 
         uint256 totalAmount;
         uint256 recipientsLength = recipients.length;

@@ -547,7 +547,6 @@ contract VaultFeesTest is VaultTestBase {
 
     /* ========== COVERAGE TESTS FOR EDGE CASES ========== */
 
-    /// @dev Coverage: Vault.sol line 256 - if (feeAmount > profit) feeAmount = profit;
     /// @notice Tests defensive check that caps feeAmount when rounding causes it to exceed profit
     function test_HarvestFees_FeeAmountCappedAtProfit() public {
         // Set maximum reward fee
@@ -573,7 +572,6 @@ contract VaultFeesTest is VaultTestBase {
         assertTrue(sharesMinted <= treasurySharesAfter, "Fee harvesting succeeded with cap");
     }
 
-    /// @dev Coverage: Vault.sol line 325 - if (feeAmount > profit) feeAmount = profit;
     /// @notice Tests view function getPendingFees() defensive check that caps feeAmount
     function test_GetPendingFees_FeeAmountCappedAtProfit() public {
         // Set maximum reward fee

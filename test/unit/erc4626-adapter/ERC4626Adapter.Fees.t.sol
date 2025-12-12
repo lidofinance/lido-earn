@@ -64,14 +64,14 @@ contract ERC4626AdapterFeesTest is ERC4626AdapterTestBase {
     function test_SetRewardFee_RevertIf_ExceedsMaximum() public {
         uint16 invalidFee = uint16(vault.MAX_REWARD_FEE_BASIS_POINTS() + 1);
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRewardFee.selector, invalidFee));
         vault.setRewardFee(invalidFee);
     }
 
     /// @notice Ensures set reward fee reverts when setting same value.
     /// @dev Verifies the revert protects against setting same value.
     function test_SetRewardFee_RevertIf_SameValue() public {
-        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, REWARD_FEE));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRewardFee.selector, REWARD_FEE));
         vault.setRewardFee(REWARD_FEE);
     }
 

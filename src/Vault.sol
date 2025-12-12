@@ -116,55 +116,61 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
 
     /* ========== ERRORS ========== */
 
-    /// @notice Thrown when an operation is attempted with zero amount
-    error ZeroAmount();
+    /// @notice Thrown when an operation is attempted with zero assets amount
+    /// @param assetsAmount Amount of assets supplied to the operation
+    /// @param sharesAmount Amount of shares associated with the operation
+    error InvalidAssetsAmount(uint256 assetsAmount, uint256 sharesAmount);
 
-    /// @notice Thrown when a zero address is provided where not allowed
-    error ZeroAddress();
+    /// @notice Thrown when an operation is attempted with zero shares amount
+    /// @param sharesAmount Amount of shares supplied to the operation
+    /// @param assetsAmount Amount of assets associated with the operation
+    error InvalidSharesAmount(uint256 sharesAmount, uint256 assetsAmount);
+
+    /// @notice Thrown when an operation is attempted with invalid receiver address
+    /// @param receiver Receiver address provided for the operation
+    error InvalidReceiverAddress(address receiver);
+
+    /// @notice Thrown when an operation is attempted with invalid asset address
+    /// @param assetAddress Asset address provided for the operation
+    error InvalidAssetAddress(address assetAddress);
+
+    /// @notice Thrown when an operation is attempted with invalid treasury address
+    /// @param treasuryAddress Treasury address provided for the operation
+    error InvalidTreasuryAddress(address treasuryAddress);
+
+    /// @notice Thrown when an operation is attempted with invalid admin address
+    /// @param adminAddress Admin address provided for role assignment
+    error InvalidAdminAddress(address adminAddress);
 
     /// @notice Thrown when user doesn't have enough shares for the operation
     /// @param requested Amount of shares requested
     /// @param available Amount of shares available
     error InsufficientShares(uint256 requested, uint256 available);
 
-    /// @notice Thrown when shares amount is invalid
-    /// @param shares The invalid shares amount
-    error InvalidSharesAmount(uint256 shares);
-
     /// @notice Thrown when fee value exceeds maximum allowed
-    /// @param fee The invalid fee value
-    error InvalidFee(uint256 fee);
+    /// @param fee Fee value in basis points that violated the limit
+    error InvalidRewardFee(uint256 fee);
 
     /// @notice Thrown when decimals offset exceeds maximum allowed
-    /// @param offset The invalid offset value
-    error OffsetTooHigh(uint8 offset);
+    /// @param offset Decimals offset value that exceeded MAX_OFFSET
+    error InvalidOffset(uint8 offset);
 
     /// @notice Thrown when deposit amount exceeds maximum allowed
     /// @param requested Amount of assets requested to deposit
     /// @param maximum Maximum amount allowed to deposit
     error ExceedsMaxDeposit(uint256 requested, uint256 maximum);
 
-    /// @notice Thrown when mint amount exceeds maximum allowed
-    /// @param requested Amount of shares requested to mint
-    /// @param maximum Maximum amount of shares allowed to mint
-    error ExceedsMaxMint(uint256 requested, uint256 maximum);
-
-    /// @notice Thrown when attempting to update treasury to the same address
-    error InvalidTreasuryAddress();
-
     /// @notice Thrown when recovery token address is zero
-    error RecoveryTokenZeroAddress();
+    /// @param token Token address requested for recovery
+    error InvalidRecoveryTokenAddress(address token);
 
     /// @notice Thrown when recovery receiver address is zero
-    error RecoveryReceiverZeroAddress();
-
-    /// @notice Thrown when attempting to recover the vault's main asset
-    /// @param asset The vault's main asset address that cannot be recovered
-    error CannotRecoverVaultAsset(address asset);
+    /// @param receiver Receiver address requested for recovery payout
+    error InvalidRecoveryReceiverAddress(address receiver);
 
     /// @notice Thrown when token balance is zero and cannot be recovered
     /// @param token The token address with zero balance
-    error RecoveryTokenBalanceZero(address token);
+    error InsufficientRecoveryTokenBalance(address token);
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -187,13 +193,11 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         string memory symbol_,
         address admin_
     ) ERC4626(asset_) ERC20(name_, symbol_) ERC20Permit(name_) {
-        if (address(asset_) == address(0)) revert ZeroAddress();
-        if (treasury_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
-        if (rewardFee_ > MAX_REWARD_FEE_BASIS_POINTS) {
-            revert InvalidFee(rewardFee_);
-        }
-        if (offset_ > MAX_OFFSET) revert OffsetTooHigh(offset_);
+        if (address(asset_) == address(0)) revert InvalidAssetAddress(address(asset_));
+        if (treasury_ == address(0)) revert InvalidTreasuryAddress(treasury_);
+        if (admin_ == address(0)) revert InvalidAdminAddress(admin_);
+        if (rewardFee_ > MAX_REWARD_FEE_BASIS_POINTS) revert InvalidRewardFee(rewardFee_);
+        if (offset_ > MAX_OFFSET) revert InvalidOffset(offset_);
 
         OFFSET = offset_;
         TREASURY = treasury_;
@@ -223,18 +227,16 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         whenNotPaused
         returns (uint256 sharesMinted)
     {
-        if (assetsToDeposit == 0) revert ZeroAmount();
-        if (shareReceiver == address(0)) revert ZeroAddress();
+        if (assetsToDeposit == 0) revert InvalidAssetsAmount(assetsToDeposit, 0);
+        if (shareReceiver == address(0)) revert InvalidReceiverAddress(shareReceiver);
 
         _harvestFees();
 
         uint256 maxAssets = maxDeposit(shareReceiver);
-        if (assetsToDeposit > maxAssets) {
-            revert ExceedsMaxDeposit(assetsToDeposit, maxAssets);
-        }
+        if (assetsToDeposit > maxAssets) revert ExceedsMaxDeposit(assetsToDeposit, maxAssets);
 
         sharesMinted = _convertToShares(assetsToDeposit, Math.Rounding.Floor);
-        if (sharesMinted == 0) revert ZeroAmount();
+        if (sharesMinted == 0) revert InvalidSharesAmount(sharesMinted, assetsToDeposit);
 
         SafeERC20.safeTransferFrom(IERC20(asset()), msg.sender, address(this), assetsToDeposit);
 
@@ -261,18 +263,16 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         whenNotPaused
         returns (uint256 assetsRequired)
     {
-        if (sharesToMint == 0) revert ZeroAmount();
-        if (shareReceiver == address(0)) revert ZeroAddress();
+        if (sharesToMint == 0) revert InvalidSharesAmount(sharesToMint, 0);
+        if (shareReceiver == address(0)) revert InvalidReceiverAddress(shareReceiver);
 
         _harvestFees();
 
         assetsRequired = _convertToAssets(sharesToMint, Math.Rounding.Ceil);
-        if (assetsRequired == 0) revert ZeroAmount();
+        if (assetsRequired == 0) revert InvalidAssetsAmount(assetsRequired, sharesToMint);
 
         uint256 maxAssets = maxDeposit(shareReceiver);
-        if (assetsRequired > maxAssets) {
-            revert ExceedsMaxDeposit(assetsRequired, maxAssets);
-        }
+        if (assetsRequired > maxAssets) revert ExceedsMaxDeposit(assetsRequired, maxAssets);
 
         SafeERC20.safeTransferFrom(IERC20(asset()), msg.sender, address(this), assetsRequired);
 
@@ -299,19 +299,17 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         nonReentrant
         returns (uint256 sharesBurned)
     {
-        if (assetsToWithdraw == 0) revert ZeroAmount();
-        if (assetReceiver == address(0)) revert ZeroAddress();
+        if (assetsToWithdraw == 0) revert InvalidAssetsAmount(assetsToWithdraw, 0);
+        if (assetReceiver == address(0)) revert InvalidReceiverAddress(assetReceiver);
 
         _harvestFees();
 
         sharesBurned = _convertToShares(assetsToWithdraw, Math.Rounding.Ceil);
-        if (sharesBurned == 0) revert ZeroAmount();
+        if (sharesBurned == 0) revert InvalidSharesAmount(sharesBurned, assetsToWithdraw);
         if (sharesBurned > balanceOf(shareOwner)) {
             revert InsufficientShares(sharesBurned, balanceOf(shareOwner));
         }
-        if (msg.sender != shareOwner) {
-            _spendAllowance(shareOwner, msg.sender, sharesBurned);
-        }
+        if (msg.sender != shareOwner) _spendAllowance(shareOwner, msg.sender, sharesBurned);
 
         _withdrawFromProtocol(assetsToWithdraw, assetReceiver);
         _burn(shareOwner, sharesBurned);
@@ -336,11 +334,9 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         nonReentrant
         returns (uint256 assetsWithdrawn)
     {
-        if (sharesToRedeem == 0) revert ZeroAmount();
-        if (assetReceiver == address(0)) revert ZeroAddress();
-        if (msg.sender != shareOwner) {
-            _spendAllowance(shareOwner, msg.sender, sharesToRedeem);
-        }
+        if (sharesToRedeem == 0) revert InvalidSharesAmount(sharesToRedeem, 0);
+        if (assetReceiver == address(0)) revert InvalidReceiverAddress(assetReceiver);
+        if (msg.sender != shareOwner) _spendAllowance(shareOwner, msg.sender, sharesToRedeem);
 
         _harvestFees();
 
@@ -349,7 +345,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
         }
 
         assetsWithdrawn = _convertToAssets(sharesToRedeem, Math.Rounding.Floor);
-        if (assetsWithdrawn == 0) revert ZeroAmount();
+        if (assetsWithdrawn == 0) revert InvalidAssetsAmount(assetsWithdrawn, sharesToRedeem);
 
         _withdrawFromProtocol(assetsWithdrawn, assetReceiver);
         _burn(shareOwner, sharesToRedeem);
@@ -449,10 +445,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @param newFee New fee in basis points (max 2000 = 20%)
      */
     function setRewardFee(uint16 newFee) external onlyRole(MANAGER_ROLE) {
-        if (newFee > MAX_REWARD_FEE_BASIS_POINTS) revert InvalidFee(newFee);
+        if (newFee > MAX_REWARD_FEE_BASIS_POINTS) revert InvalidRewardFee(newFee);
 
         uint16 oldFee = rewardFee;
-        if (newFee == oldFee) revert InvalidFee(newFee);
+        if (newFee == oldFee) revert InvalidRewardFee(newFee);
 
         _harvestFees();
         rewardFee = newFee;
@@ -465,10 +461,10 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @param newTreasury New treasury address
      */
     function setTreasury(address newTreasury) external onlyRole(MANAGER_ROLE) {
-        if (newTreasury == address(0)) revert ZeroAddress();
+        if (newTreasury == address(0)) revert InvalidTreasuryAddress(newTreasury);
 
         address oldTreasury = TREASURY;
-        if (newTreasury == oldTreasury) revert InvalidTreasuryAddress();
+        if (newTreasury == oldTreasury) revert InvalidTreasuryAddress(newTreasury);
 
         _harvestFees();
         TREASURY = newTreasury;
@@ -517,12 +513,12 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @param receiver Address that will receive the recovered tokens
      */
     function recoverERC20(address token, address receiver) public virtual onlyRole(MANAGER_ROLE) {
-        if (token == address(0)) revert RecoveryTokenZeroAddress();
-        if (receiver == address(0)) revert RecoveryReceiverZeroAddress();
-        if (token == asset()) revert CannotRecoverVaultAsset(token);
+        if (receiver == address(0)) revert InvalidRecoveryReceiverAddress(receiver);
+        if (token == address(0)) revert InvalidRecoveryTokenAddress(token);
+        if (token == asset()) revert InvalidRecoveryTokenAddress(token);
 
         uint256 balance = IERC20(token).balanceOf(address(this));
-        if (balance == 0) revert RecoveryTokenBalanceZero(token);
+        if (balance == 0) revert InsufficientRecoveryTokenBalance(token);
 
         SafeERC20.safeTransfer(IERC20(token), receiver, balance);
         emit TokenRecovered(token, receiver, balance);

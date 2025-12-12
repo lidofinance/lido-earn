@@ -159,7 +159,7 @@ contract VaultConstructorTest is TestConfig {
 
     /// @notice Test that constructor reverts when asset address is zero
     function test_Constructor_RevertWhen_AssetIsZeroAddress() public {
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidAssetAddress.selector, address(0)));
 
         new MockVault(
             address(0), // Zero address asset
@@ -176,7 +176,7 @@ contract VaultConstructorTest is TestConfig {
     function test_Constructor_RevertWhen_TreasuryIsZeroAddress() public {
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidTreasuryAddress.selector, address(0)));
 
         new MockVault(
             address(asset),
@@ -194,7 +194,7 @@ contract VaultConstructorTest is TestConfig {
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
         uint8 invalidOffset = 24; // MAX_OFFSET = 23, so 24 is invalid
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.OffsetTooHigh.selector, invalidOffset));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidOffset.selector, invalidOffset));
 
         new MockVault(
             address(asset), treasury, VALID_REWARD_FEE, invalidOffset, VAULT_NAME, VAULT_SYMBOL, address(this)
@@ -206,7 +206,7 @@ contract VaultConstructorTest is TestConfig {
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
         uint16 invalidRewardFee = 2001; // MAX_REWARD_FEE_BASIS_POINTS = 2000, so 2001 is invalid
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, invalidRewardFee));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRewardFee.selector, invalidRewardFee));
 
         new MockVault(address(asset), treasury, invalidRewardFee, VALID_OFFSET, VAULT_NAME, VAULT_SYMBOL, address(this));
     }
@@ -246,7 +246,7 @@ contract VaultConstructorTest is TestConfig {
 
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, rewardFee));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRewardFee.selector, rewardFee));
 
         new MockVault(address(asset), treasury, rewardFee, VALID_OFFSET, VAULT_NAME, VAULT_SYMBOL, address(this));
     }
@@ -258,7 +258,7 @@ contract VaultConstructorTest is TestConfig {
 
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.OffsetTooHigh.selector, offset));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidOffset.selector, offset));
 
         new MockVault(address(asset), treasury, VALID_REWARD_FEE, offset, VAULT_NAME, VAULT_SYMBOL, address(this));
     }
@@ -266,11 +266,10 @@ contract VaultConstructorTest is TestConfig {
     /* ========== ERC4626 ADAPTER CONSTRUCTOR TESTS ========== */
 
     /// @notice Test that ERC4626Adapter constructor reverts when target vault address is zero
-    /// @dev Coverage: src/adapters/ERC4626Adapter.sol:102 - if (targetVault_ == address(0)) revert TargetVaultZeroAddress();
     function test_AdapterConstructor_RevertWhen_TargetVaultIsZeroAddress() public {
         asset = new MockERC20("USD Coin", "USDC", _assetDecimals());
 
-        vm.expectRevert(ERC4626Adapter.TargetVaultZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(ERC4626Adapter.InvalidTargetVaultAddress.selector, address(0)));
 
         new ERC4626Adapter(
             address(asset),

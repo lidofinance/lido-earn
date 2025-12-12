@@ -33,7 +33,7 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
 
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidAssetsAmount.selector, 0, 0));
         vm.prank(alice);
         vault.withdraw(0, alice, alice);
     }
@@ -44,7 +44,7 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
 
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidReceiverAddress.selector, address(0)));
         vm.prank(alice);
         vault.withdraw(10_000e6, address(0), alice);
     }
@@ -302,7 +302,7 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         vault.deposit(10_000e6, alice);
 
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidSharesAmount.selector, 0, 0));
         vm.prank(alice);
         vault.redeem(0, alice, alice);
     }
@@ -313,7 +313,7 @@ contract VaultWithdrawTest is VaultTestBase {
         vm.prank(alice);
         uint256 shares = vault.deposit(10_000e6, alice);
 
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidReceiverAddress.selector, address(0)));
         vm.prank(alice);
         vault.redeem(shares / 2, address(0), alice);
     }

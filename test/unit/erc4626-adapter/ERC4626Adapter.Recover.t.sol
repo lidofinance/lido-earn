@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {Vault} from "src/Vault.sol";
 import {ERC4626Adapter} from "src/adapters/ERC4626Adapter.sol";
 import "./ERC4626AdapterTestBase.sol";
 
@@ -14,7 +15,7 @@ contract ERC4626AdapterRecoverTest is ERC4626AdapterTestBase {
         vault.deposit(depositAmount, alice);
 
         vm.expectRevert(
-            abi.encodeWithSelector(ERC4626Adapter.CannotRecoverTargetVaultShares.selector, address(targetVault))
+            abi.encodeWithSelector(Vault.InvalidRecoveryTokenAddress.selector, address(targetVault))
         );
         vault.recoverERC20(address(targetVault), receiver);
     }

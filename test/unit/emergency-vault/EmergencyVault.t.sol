@@ -18,7 +18,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
     event EmergencyModeActivated(uint256 emergencyAssetsSnapshot, uint256 activationTimestamp);
     event EmergencyWithdrawal(uint256 recovered, uint256 remaining);
-    event RecoveryActivated(
+    event RecoveryModeActivated(
         uint256 declaredRecoverableAmount, uint256 recoverySupply, uint256 protocolBalance, uint256 implicitLoss
     );
 
@@ -227,7 +227,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
 
-        vm.expectRevert(EmergencyVault.RecoveryAlreadyActive.selector);
+        vm.expectRevert(EmergencyVault.RecoveryModeAlreadyActive.selector);
         vm.prank(emergencyAdmin);
         vault.emergencyWithdraw();
     }
@@ -323,7 +323,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         uint256 implicitLoss = 0; // No loss in this scenario
 
         vm.expectEmit(true, true, true, true);
-        emit RecoveryActivated(vaultBalance, totalSupply, protocolBalance, implicitLoss);
+        emit RecoveryModeActivated(vaultBalance, totalSupply, protocolBalance, implicitLoss);
 
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
@@ -401,7 +401,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
 
-        vm.expectRevert(EmergencyVault.RecoveryAlreadyActive.selector);
+        vm.expectRevert(EmergencyVault.RecoveryModeAlreadyActive.selector);
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
     }
@@ -448,7 +448,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(usdc.balanceOf(address(vault)), 0);
         assertTrue(vault.emergencyMode());
 
-        vm.expectRevert(EmergencyVault.ZeroBalance.selector);
+        vm.expectRevert(abi.encodeWithSelector(EmergencyVault.InvalidRecoveryAssets.selector, 0));
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
     }
@@ -746,7 +746,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
 
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidSharesAmount.selector, 0, 0));
         vm.prank(alice);
         vault.redeem(0, alice, alice);
     }
@@ -766,7 +766,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
 
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidReceiverAddress.selector, address(0)));
         vm.prank(alice);
         vault.redeem(shares, address(0), alice);
     }
@@ -1004,7 +1004,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         uint256 expectedAssets = tinyShares * vault.recoveryAssets() / vault.recoverySupply();
         assertEq(expectedAssets, 0);
 
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidAssetsAmount.selector, 0, tinyShares));
         vm.prank(alice);
         vault.redeem(tinyShares, alice, alice);
     }
@@ -1042,8 +1042,8 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         assertEq(usdc.balanceOf(address(vault)), directMint);
         assertTrue(vault.emergencyMode());
 
-        // Now activateRecovery should revert with ZeroSupply due to zero supply
-        vm.expectRevert(EmergencyVault.ZeroSupply.selector);
+        // Now activateRecovery should revert with InvalidRecoverySupply due to zero supply
+        vm.expectRevert(abi.encodeWithSelector(EmergencyVault.InvalidRecoverySupply.selector, 0));
         vm.prank(emergencyAdmin);
         vault.activateRecovery();
     }
@@ -1114,7 +1114,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
         // Activate recovery
         vm.prank(emergencyAdmin);
         vm.expectEmit(true, true, true, true);
-        emit RecoveryActivated(remainingBalance, vault.totalSupply(), protocolBalance, implicitLoss);
+        emit RecoveryModeActivated(remainingBalance, vault.totalSupply(), protocolBalance, implicitLoss);
         vault.activateRecovery();
     }
 
@@ -1146,7 +1146,7 @@ contract EmergencyVaultTest is EmergencyVaultTestBase {
 
         vm.prank(emergencyAdmin);
         vm.expectEmit(true, true, true, true);
-        emit RecoveryActivated(vaultBalance, vault.totalSupply(), protocolBalance, expectedLoss);
+        emit RecoveryModeActivated(vaultBalance, vault.totalSupply(), protocolBalance, expectedLoss);
         vault.activateRecovery();
 
         // Verify: emergencySnapshot = vaultBalance + protocolBalance (no loss)

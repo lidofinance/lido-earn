@@ -143,14 +143,14 @@ abstract contract EmergencyVault is Vault {
      * @param remainingProtocolBalance Amount stuck in protocol due to liquidity constraints
      * @param implicitLoss Value lost compared to emergencyTotalAssets snapshot
      */
-    event RecoveryActivated(
+    event RecoveryModeActivated(
         uint256 recoveryBalance, uint256 recoverySupply, uint256 remainingProtocolBalance, uint256 implicitLoss
     );
 
     /* ========== ERRORS ========== */
 
     /// @notice Thrown when trying to activate recovery that's already active
-    error RecoveryAlreadyActive();
+    error RecoveryModeAlreadyActive();
 
     /// @notice Thrown when attempting a disabled action while emergency mode is active
     error DisabledDuringEmergencyMode();
@@ -162,10 +162,12 @@ abstract contract EmergencyVault is Vault {
     error EmergencyModeNotActive();
 
     /// @notice Thrown when trying to activate recovery with balance being zero
-    error ZeroBalance();
+    /// @param assets Amount of assets on the balance at the moment of operation
+    error InvalidRecoveryAssets(uint256 assets);
 
     /// @notice Thrown when trying to activate recovery with supply being zero
-    error ZeroSupply();
+    /// @param supply Supply at the moment of operation
+    error InvalidRecoverySupply(uint256 supply);
 
     /* ========== EMERGENCY FUNCTIONS ========== */
 
@@ -180,7 +182,7 @@ abstract contract EmergencyVault is Vault {
      * @return recovered Amount of assets recovered in this call
      */
     function emergencyWithdraw() external virtual onlyRole(EMERGENCY_ROLE) nonReentrant returns (uint256 recovered) {
-        if (recoveryMode) revert RecoveryAlreadyActive();
+        if (recoveryMode) revert RecoveryModeAlreadyActive();
         if (!emergencyMode) activateEmergencyMode();
 
         recovered = _emergencyWithdrawFromProtocol(address(this));
@@ -231,16 +233,16 @@ abstract contract EmergencyVault is Vault {
      *      where implicitLoss = max(0, emergencyTotalAssets - actualBalance)
      */
     function activateRecovery() external virtual onlyRole(EMERGENCY_ROLE) nonReentrant {
-        if (recoveryMode) revert RecoveryAlreadyActive();
+        if (recoveryMode) revert RecoveryModeAlreadyActive();
         if (!emergencyMode) revert EmergencyModeNotActive();
 
         _harvestFees();
 
         uint256 actualBalance = IERC20(asset()).balanceOf(address(this));
-        if (actualBalance == 0) revert ZeroBalance();
+        if (actualBalance == 0) revert InvalidRecoveryAssets(actualBalance);
 
         uint256 supply = totalSupply();
-        if (supply == 0) revert ZeroSupply();
+        if (supply == 0) revert InvalidRecoverySupply(supply);
 
         uint256 protocolBalance = _getProtocolBalance();
         uint256 implicitLoss = emergencyTotalAssets > actualBalance ? emergencyTotalAssets - actualBalance : 0;
@@ -249,7 +251,7 @@ abstract contract EmergencyVault is Vault {
         recoverySupply = supply;
         recoveryMode = true;
 
-        emit RecoveryActivated(actualBalance, supply, protocolBalance, implicitLoss);
+        emit RecoveryModeActivated(actualBalance, supply, protocolBalance, implicitLoss);
     }
 
     /* ========== OVERRIDES TO BLOCK NORMAL OPERATIONS DURING EMERGENCY ========== */
@@ -333,13 +335,13 @@ abstract contract EmergencyVault is Vault {
         nonReentrant
         returns (uint256 assets)
     {
-        if (shares == 0) revert ZeroAmount();
-        if (receiver == address(0)) revert ZeroAddress();
+        if (shares == 0) revert InvalidSharesAmount(shares, 0);
+        if (receiver == address(0)) revert InvalidReceiverAddress(receiver);
         if (shares > balanceOf(owner)) revert InsufficientShares(shares, balanceOf(owner));
         if (msg.sender != owner) _spendAllowance(owner, msg.sender, shares);
 
         assets = convertToAssets(shares);
-        if (assets == 0) revert ZeroAmount();
+        if (assets == 0) revert InvalidAssetsAmount(assets, shares);
 
         _burn(owner, shares);
         IERC20(asset()).safeTransfer(receiver, assets);

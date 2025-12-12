@@ -68,7 +68,8 @@ contract ERC4626Adapter is EmergencyVault {
     /* ========== ERRORS ========== */
 
     /// @notice Thrown when target vault address is zero in constructor
-    error TargetVaultZeroAddress();
+    /// @param vault Target ERC4626 vault address supplied to the constructor
+    error InvalidTargetVaultAddress(address vault);
 
     /// @notice Thrown when target vault deposit returns unexpected shares
     error TargetVaultDepositFailed();
@@ -82,10 +83,6 @@ contract ERC4626Adapter is EmergencyVault {
     /// @param asset Address of the underlying asset (USDC, USDT, etc.)
     /// @param targetVaultAsset Address of the target vault asset
     error TargetVaultAssetMismatch(address asset, address targetVaultAsset);
-
-    /// @notice Thrown when attempting to recover target vault share tokens
-    /// @param token Address of the share token that cannot be recovered
-    error CannotRecoverTargetVaultShares(address token);
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -110,7 +107,7 @@ contract ERC4626Adapter is EmergencyVault {
         string memory symbol_,
         address admin_
     ) Vault(IERC20(asset_), treasury_, rewardFee_, offset_, name_, symbol_, admin_) {
-        if (targetVault_ == address(0)) revert TargetVaultZeroAddress();
+        if (targetVault_ == address(0)) revert InvalidTargetVaultAddress(targetVault_);
 
         TARGET_VAULT = IERC4626(targetVault_);
         if (asset_ != TARGET_VAULT.asset()) revert TargetVaultAssetMismatch(asset_, TARGET_VAULT.asset());
@@ -205,7 +202,7 @@ contract ERC4626Adapter is EmergencyVault {
      * @param receiver Address that will receive the recovered tokens
      */
     function recoverERC20(address token, address receiver) public override onlyRole(MANAGER_ROLE) {
-        if (token == address(TARGET_VAULT)) revert CannotRecoverTargetVaultShares(token);
+        if (token == address(TARGET_VAULT)) revert InvalidRecoveryTokenAddress(token);
         return super.recoverERC20(token, receiver);
     }
 

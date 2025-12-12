@@ -52,7 +52,7 @@ contract VaultRedeemZeroTest is VaultTestBase {
 
         // Should revert for any dust amount
         vm.prank(user);
-        vm.expectRevert(Vault.ZeroAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidAssetsAmount.selector, 0, dustAmount));
         vault.redeem(dustAmount, user, user);
     }
 }

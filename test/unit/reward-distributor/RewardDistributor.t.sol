@@ -257,7 +257,7 @@ contract RewardDistributorTest is TestConfig {
         RewardDistributor distributor = _deployDefaultDistributor();
         (address currentRecipient,) = distributor.getRecipient(0);
 
-        vm.expectRevert(RewardDistributor.RecipientUnchanged.selector);
+        vm.expectRevert(abi.encodeWithSelector(RewardDistributor.InvalidRecipientAddress.selector, currentRecipient));
         vm.prank(admin);
         distributor.replaceRecipient(0, currentRecipient);
     }
@@ -290,7 +290,7 @@ contract RewardDistributorTest is TestConfig {
     function test_Distribute_RevertIf_NoBalance() public {
         RewardDistributor distributor = _deployDefaultDistributor();
 
-        vm.expectRevert(RewardDistributor.NoBalance.selector);
+        vm.expectRevert(RewardDistributor.InsufficientBalance.selector);
         vm.prank(admin);
         distributor.distribute(address(asset));
     }
@@ -393,7 +393,7 @@ contract RewardDistributorTest is TestConfig {
     function test_Redeem_RevertIf_NoShares() public {
         RewardDistributor distributor = _deployDefaultDistributor();
 
-        vm.expectRevert(RewardDistributor.NoShares.selector);
+        vm.expectRevert(RewardDistributor.NoAvailableSharesToRedeem.selector);
         vm.prank(admin);
         distributor.redeem(address(vault));
     }

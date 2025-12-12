@@ -48,14 +48,14 @@ contract VaultConfigTest is VaultTestBase {
     function test_SetRewardFee_RevertIf_ExceedsMaximum() public {
         uint16 invalidFee = uint16(vault.MAX_REWARD_FEE_BASIS_POINTS() + 1);
 
-        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, invalidFee));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRewardFee.selector, invalidFee));
         vault.setRewardFee(invalidFee);
     }
 
     /// @notice Ensures set reward fee reverts when setting same value.
     /// @dev Verifies the revert protects against setting same value.
     function test_SetRewardFee_RevertIf_SameValue() public {
-        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidFee.selector, REWARD_FEE));
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidRewardFee.selector, REWARD_FEE));
         vault.setRewardFee(REWARD_FEE);
     }
 
@@ -169,14 +169,14 @@ contract VaultConfigTest is VaultTestBase {
     /// @notice Ensures set treasury reverts when zero address.
     /// @dev Verifies the revert protects against zero address.
     function test_SetTreasury_RevertIf_ZeroAddress() public {
-        vm.expectRevert(Vault.ZeroAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidTreasuryAddress.selector, address(0)));
         vault.setTreasury(address(0));
     }
 
     /// @notice Ensures set treasury reverts when same address.
     /// @dev Verifies the revert protects against same address.
     function test_SetTreasury_RevertIf_SameAddress() public {
-        vm.expectRevert(Vault.InvalidTreasuryAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidTreasuryAddress.selector, treasury));
         vault.setTreasury(treasury);
     }
 
