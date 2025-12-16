@@ -2,6 +2,11 @@
 
 pragma solidity 0.8.30;
 
+// Supported networks
+uint256 constant ETHEREUM_MAINNET = 1;
+uint256 constant ETHEREUM_SEPOLIA = 11155111;
+uint256 constant BASE_MAINNET = 8453;
+
 // Mainnet token addresses
 address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
