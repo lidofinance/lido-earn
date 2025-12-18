@@ -541,7 +541,7 @@ abstract contract Vault is ERC4626, ERC20Permit, AccessControl, ReentrancyGuard,
      * @return Number of decimals
      */
     function decimals() public view virtual override(ERC20, ERC4626) returns (uint8) {
-        return IERC20Metadata(asset()).decimals();
+        return IERC20Metadata(asset()).decimals() + _decimalsOffset();
     }
 
     /**

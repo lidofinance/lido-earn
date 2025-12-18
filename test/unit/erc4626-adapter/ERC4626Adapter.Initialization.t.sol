@@ -14,7 +14,7 @@ contract ERC4626AdapterInitializationTest is ERC4626AdapterTestBase {
         assertEq(vault.rewardFee(), REWARD_FEE);
         assertEq(vault.name(), "Lido ERC4626 Vault");
         assertEq(vault.symbol(), "lido4626");
-        assertEq(vault.decimals(), assetDecimals);
+        assertEq(vault.decimals(), assetDecimals + OFFSET, "Vault decimals should include offset");
     }
 
     /// @notice Tests that initial state.

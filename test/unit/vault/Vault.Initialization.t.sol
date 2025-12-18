@@ -14,7 +14,7 @@ contract VaultInitializationTest is VaultTestBase {
         assertEq(vault.rewardFee(), REWARD_FEE);
         assertEq(vault.name(), "Mock Vault");
         assertEq(vault.symbol(), "mvUSDC");
-        assertEq(vault.decimals(), assetDecimals);
+        assertEq(vault.decimals(), assetDecimals + OFFSET, "Vault decimals should include offset");
     }
 
     /// @notice Tests that initial state.

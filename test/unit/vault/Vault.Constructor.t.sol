@@ -89,9 +89,8 @@ contract VaultConstructorTest is TestConfig {
             address(asset), treasury, VALID_REWARD_FEE, VALID_OFFSET, VAULT_NAME, VAULT_SYMBOL, address(this)
         );
 
-        // Vault decimals should equal asset decimals (not asset decimals + offset)
-        // Note: ERC4626 standard dictates vault decimals = asset decimals
-        assertEq(vault.decimals(), asset.decimals(), "Decimals not set correctly");
+        // Vault decimals should equal asset decimals + offset (for inflation attack protection)
+        assertEq(vault.decimals(), asset.decimals() + VALID_OFFSET, "Decimals not set correctly");
     }
 
     /// @notice Test valid construction with zero offset
