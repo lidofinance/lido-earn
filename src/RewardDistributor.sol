@@ -49,7 +49,7 @@ contract RewardDistributor is AccessControl {
     Recipient[] private recipients;
 
     /// @notice Mapping to track if an address is already configured as a recipient
-    mapping(address => bool) private recipientExists;
+    mapping(address recipient => bool exists) private recipientExists;
 
     /* ========== EVENTS ========== */
 
@@ -140,7 +140,7 @@ contract RewardDistributor is AccessControl {
             revert InvalidRecipientsLength();
         }
 
-        uint256 totalBps = 0;
+        uint256 totalBps;
 
         for (uint256 i = 0; i < recipients_.length; i++) {
             address recipientAccount = recipients_[i];
@@ -228,13 +228,13 @@ contract RewardDistributor is AccessControl {
         uint256 totalAmount;
         uint256 recipientsLength = recipients.length;
         for (uint256 i = 0; i < recipientsLength; i++) {
-            Recipient memory recipient = recipients[i];
-
-            uint256 amount = (balance * recipient.basisPoints) / MAX_BASIS_POINTS;
+            Recipient storage recipient = recipients[i];
+            (address account, uint256 basisPoints) = (recipient.account, recipient.basisPoints);
+            uint256 amount = (balance * basisPoints) / MAX_BASIS_POINTS;
 
             if (amount > 0) {
-                tokenContract.safeTransfer(recipient.account, amount);
-                emit RecipientPaid(recipient.account, token, amount);
+                tokenContract.safeTransfer(account, amount);
+                emit RecipientPaid(account, token, amount);
             }
 
             totalAmount += amount;
@@ -260,10 +260,8 @@ contract RewardDistributor is AccessControl {
      * @return basisPoints Allocation percentage in basis points
      */
     function getRecipient(uint256 index) external view returns (address account, uint256 basisPoints) {
-        Recipient memory recipient = recipients[index];
-
-        account = recipient.account;
-        basisPoints = recipient.basisPoints;
+        Recipient storage recipient = recipients[index];
+        (account, basisPoints) = (recipient.account, recipient.basisPoints);
     }
 
     /**
