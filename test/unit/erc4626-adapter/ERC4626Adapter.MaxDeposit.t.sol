@@ -36,6 +36,16 @@ contract ERC4626AdapterMaxDepositTest is ERC4626AdapterTestBase {
         assertEq(vaultMaxDeposit, 0, "MaxDeposit should be 0 during emergency mode");
     }
 
+    function test_MaxMint_ReturnsMaxUint_WhenTargetVaultUnlimited() public view {
+        // Verify target vault has unlimited capacity
+        uint256 targetMaxDeposit = targetVault.maxDeposit(address(vault));
+        assertEq(targetMaxDeposit, type(uint256).max, "Target should be unlimited");
+
+        // Verify adapter propagates unlimited capacity
+        uint256 adapterMaxMint = vault.maxMint(alice);
+        assertEq(adapterMaxMint, type(uint256).max, "Should return max uint");
+      }
+
     /// @notice Tests that max mint respects target vault limits.
     /// @dev Validates that max mint respects target vault limits.
     function test_MaxMint_RespectsTargetVaultLimits() public {

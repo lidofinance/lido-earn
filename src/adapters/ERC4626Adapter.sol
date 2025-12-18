@@ -147,6 +147,7 @@ contract ERC4626Adapter is EmergencyVault {
     function maxMint(address /* user */ ) public view override returns (uint256) {
         if (paused() || emergencyMode) return 0;
         uint256 maxAssets = TARGET_VAULT.maxDeposit(address(this));
+        if (maxAssets == type(uint256).max) return type(uint256).max;
         return _convertToShares(maxAssets, Math.Rounding.Floor);
     }
 
