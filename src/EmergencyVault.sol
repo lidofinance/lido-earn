@@ -181,7 +181,7 @@ abstract contract EmergencyVault is Vault {
      *      Only callable by EMERGENCY_ROLE.
      * @return recovered Amount of assets recovered in this call
      */
-    function emergencyWithdraw() external virtual onlyRole(EMERGENCY_ROLE) nonReentrant returns (uint256 recovered) {
+    function emergencyWithdraw() external virtual nonReentrant onlyRole(EMERGENCY_ROLE) returns (uint256 recovered) {
         if (recoveryMode) revert RecoveryModeAlreadyActive();
         if (!emergencyMode) activateEmergencyMode();
 
@@ -229,10 +229,10 @@ abstract contract EmergencyVault is Vault {
      *      - Total supply must be > 0 (cannot recover to empty vault)
      *      - Only callable by EMERGENCY_ROLE
      *
-     *      Emits RecoveryActivated(actualBalance, totalSupply, protocolBalance, implicitLoss)
+     *      Emits RecoveryModeActivated(actualBalance, supply, protocolBalance, implicitLoss)
      *      where implicitLoss = max(0, emergencyTotalAssets - actualBalance)
      */
-    function activateRecovery() external virtual onlyRole(EMERGENCY_ROLE) nonReentrant {
+    function activateRecovery() external virtual nonReentrant onlyRole(EMERGENCY_ROLE) {
         if (recoveryMode) revert RecoveryModeAlreadyActive();
         if (!emergencyMode) revert EmergencyModeNotActive();
 
