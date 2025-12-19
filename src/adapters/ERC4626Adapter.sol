@@ -197,13 +197,16 @@ contract ERC4626Adapter is EmergencyVault {
 
     /**
      * @notice Recovers non-core ERC20 tokens accidentally held by the adapter
-     * @dev Blocks recovery of the target vault's share token to avoid stealing strategy positions.
+     * @dev Blocks recovery of TARGET_VAULT shares in normal mode to prevent draining strategy positions.
+     *      In recovery mode, allows recovering TARGET_VAULT shares to claim stuck funds when target vault
+     *      has insufficient liquidity and shares cannot be withdrawn normally.
      *      Delegates to the base Vault implementation for all other tokens.
+     *
      * @param token Address of the ERC20 token to recover
      * @param receiver Address that will receive the recovered tokens
      */
     function recoverERC20(address token, address receiver) public override onlyRole(MANAGER_ROLE) {
-        if (token == address(TARGET_VAULT)) revert InvalidRecoveryTokenAddress(token);
+        if (token == address(TARGET_VAULT) && !recoveryMode) revert InvalidRecoveryTokenAddress(token);
         return super.recoverERC20(token, receiver);
     }
 
